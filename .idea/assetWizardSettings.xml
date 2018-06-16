@@ -36,8 +36,8 @@
                                     <map>
                                       <entry key="assetType" value="IMAGE" />
                                       <entry key="iconShape" value="NONE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Fiat 500-480-100px/icons8-fiat-500-480.png" />
-                                      <entry key="outputName" value="user" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Motorcycle-480px/icons8-motorcycle-480.png" />
+                                      <entry key="outputName" value="ic_bike" />
                                     </map>
                                   </option>
                                 </PersistentState>

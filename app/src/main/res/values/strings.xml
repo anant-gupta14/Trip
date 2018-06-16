@@ -6,4 +6,9 @@
     <string name="dummy_content">DUMMY\nCONTENT</string>
     <string name="title_activity_admin_map">Map</string>
     <string name="title_activity_user_maps">Map</string>
+    <string name="google_directions_key">AIzaSyDP2P917qTv15UYCgsu0rhvWQvejA9ZCWg</string>
+    <string name="open">Open</string>
+    <string name="close">Close</string>
+
+    <!--http://maps.googleapis.com/maps/api/direction/json?mode=driving&transit_routing_preference=less_driving&origin=12.9346003,77.576301&destination=btm&key=AIzaSyDP2P917qTv15UYCgsu0rhvWQvejA9ZCWg-->
 </resources>

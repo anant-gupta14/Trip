@@ -10,7 +10,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
-import android.util.Log;
+import android.view.WindowManager;
 import android.widget.Button;
 
 import com.firebase.geofire.GeoFire;
@@ -20,6 +20,7 @@ import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -34,6 +35,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +52,7 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
     private LatLng startPointLatLng, destLatLng, currentLocation, adminLatLng;
     private Marker myMarker, startMarker, endMarker, adminMarker;
     private boolean isBasicTripInfoCaptured;
+    private List<Marker> userMarkers;
 
     private ValueEventListener tripValueEventListener;
     LocationCallback locationCallback = new LocationCallback() {
@@ -63,6 +66,7 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
                     fetchTripDetails();
                     getTripInfo();
                     getAdminUsersDetails();
+                    getOtherUsers();
                 }
             }
 
@@ -78,6 +82,7 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         //fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         initialize();
         setListeners();
         tripId = getIntent().getExtras().getString("tripId");
@@ -109,6 +114,7 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
 
 
         currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
         DatabaseReference userDBRef = tripDatabaseReference.child("Users");
         GeoFire geoFire = new GeoFire(userDBRef);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
@@ -116,11 +122,8 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
         if (myMarker != null) {
             myMarker.remove();
         }
-        if (adminMarker != null) {
-            //      adminMarker.remove();
-        }
 
-        myMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("User").icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
+        //myMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("User").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
         if (startPointLatLng != null && destLatLng != null && startMarker == null && endMarker == null) {
             startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title("Start").icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
             endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title("End").icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
@@ -132,8 +135,8 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
         tripValueEventListener = tripDatabaseReference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                Log.d("listneres", "reached inside the datasnaphot");
-                dataSnapshot.exists();
+                // Log.d("listneres", "reached inside the datasnaphot");
+                //dataSnapshot.exists();
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
                     isBasicTripInfoCaptured = true;
                     Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
@@ -156,12 +159,16 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
                             Map<String, Object> adminLoc = (Map<String, Object>) map.get(adminId);
                             List<Object> list = (List<Object>) adminLoc.get("l");
                             adminLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                            if (adminMarker == null && adminLatLng != null) {
-                                adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title("Admin").icon(BitmapDescriptorFactory.fromResource(R.mipmap.admin)));
+                            if (adminMarker != null) {
+                                adminMarker.remove();
                             }
 
                         }
                     }
+                    //  if (adminMarker == null && adminLatLng != null) {
+                    adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title("Admin").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
+                    //}
+
                 }
 
             }
@@ -173,6 +180,53 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
         });
 
     }
+
+    private void getOtherUsers() {
+        tripDatabaseReference.child("Users").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                    removeExistingUsers();
+                    userMarkers = new ArrayList<>();
+                    Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
+                    for (String str : users.keySet()) {
+                        if (!userId.equals(str)) {
+                            int i = 0;
+                            Map<String, Object> userData = (Map<String, Object>) users.get(str);
+                            List<Object> list = (List<Object>) userData.get("l");
+                            LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                            Marker userMarker = null;
+                            if (i % 2 == 0) {
+                                userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
+                                        .icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
+                            } else {
+                                userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
+                                        .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
+                            }
+
+                            i++;
+                            userMarkers.add(userMarker);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private void removeExistingUsers() {
+        if (userMarkers != null && !userMarkers.isEmpty()) {
+            for (Marker marker : userMarkers) {
+                marker.remove();
+            }
+        }
+        userMarkers = null;
+    }
+
 
     /**
      * Manipulates the map once available.
@@ -187,8 +241,8 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
         locationRequest = new LocationRequest();
-        locationRequest.setInterval(1000);
-        locationRequest.setFastestInterval(1000);
+        locationRequest.setInterval(3000);
+        locationRequest.setFastestInterval(3000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
