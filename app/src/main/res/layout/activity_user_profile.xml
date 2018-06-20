@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".UserProfileActivity">
+
+    <TextView
+        android:id="@+id/userEmail"
+        android:layout_width="match_parent"
+        android:layout_height="30sp"
+        android:text="user@email.com" />
+
+    <EditText
+        android:id="@+id/userName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Name" />
+
+    <EditText
+        android:id="@+id/userPhone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="phone number" />
+
+    <RadioGroup
+        android:id="@+id/vehicleGroup"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <RadioButton
+            android:id="@+id/userCar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Car" />
+
+        <RadioButton
+            android:id="@+id/userBike"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Bike" />
+
+        <RadioButton
+            android:id="@+id/human"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Human" />
+    </RadioGroup>
+
+    <Button
+        android:id="@+id/updateButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Update" />
+
+</LinearLayout>

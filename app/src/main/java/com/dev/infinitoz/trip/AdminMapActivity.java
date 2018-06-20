@@ -24,6 +24,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.view.animation.LinearInterpolator;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -95,6 +96,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private TextView tripIdTextView;
     private DatabaseReference tripDBReference;
     private List<Marker> userMarkers;
+
+    private ImageView appImageView;
     LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
@@ -381,6 +384,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         tripIdTextView = findViewById(R.id.tripId);
         polylineList = new ArrayList<>();
         mService = Common.getGoogleApi();
+
+
         navigationView = findViewById(R.id.navView);
         navigationView.bringToFront();
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
@@ -390,7 +395,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
                 switch (id) {
 
-                    case R.id.settings:
+                    case R.id.userProfile:
                         break;
                     case R.id.logoutNav:
                         FirebaseAuth.getInstance().signOut();

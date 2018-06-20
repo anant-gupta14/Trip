@@ -43,7 +43,8 @@
             android:label="@string/title_activity_user_maps" />
         <activity
             android:name=".UserMapsActivity"
-            android:label="@string/title_activity_user_maps"></activity>
+            android:label="@string/title_activity_user_maps" />
+        <activity android:name=".UserProfileActivity"></activity>
     </application>
 
 </manifest>
