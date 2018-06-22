@@ -26,6 +26,7 @@ import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -85,6 +86,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private LatLng startPointLatLng, destLatLng, currentLocation;
     private String startPoint, endPoint, tripID, userId;
     private PlaceAutocompleteFragment startAutocompleteFragment, destAutocompleteFragment;
+    private SupportMapFragment mapFragment;
+    private View mapView;
 
     private Button logout, startTripButton;
     private boolean isTripStarted;
@@ -361,7 +364,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_map);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -377,6 +380,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         startTripButton = findViewById(R.id.createTrip);
         drawerLayout = findViewById(R.id.nav);
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.open, R.string.close);
+        mapView = mapFragment.getView();
 
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
@@ -392,21 +396,27 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
                 int id = item.getItemId();
-
+                Intent intent = null;
                 switch (id) {
-
                     case R.id.userProfile:
-                        break;
-                    case R.id.logoutNav:
-                        FirebaseAuth.getInstance().signOut();
-                        Intent intent = new Intent(AdminMapActivity.this, MainActivity.class);
+                        intent = new Intent(AdminMapActivity.this, UserProfileActivity.class);
                         startActivity(intent);
                         finish();
                         break;
-                    case R.id.vehicleType:
+                    case R.id.contactUs:
+                        break;
+                    case R.id.privacyPolicy:
+                        break;
+                    case R.id.changePass:
+                        break;
+                    case R.id.logoutNav:
+                        FirebaseAuth.getInstance().signOut();
+                        intent = new Intent(AdminMapActivity.this, MainActivity.class);
+                        startActivity(intent);
+                        finish();
                         break;
                 }
-                return false;
+                return true;
             }
         });
 
@@ -485,33 +495,34 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private void setStartAndDestLocation() {
         userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         tripID = Utility.generateTripId(userId);
-        tripDBReference = FirebaseDatabase.getInstance().getReference("Trip").child(tripID);
+        tripDBReference = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripID);
         GeoFire geoFire = new GeoFire(tripDBReference);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
 
         GeoFire geoFireStart = new GeoFire(tripDBReference);
-        geoFire.setLocation("start", new GeoLocation(startPointLatLng.latitude, startPointLatLng.longitude));
+        geoFire.setLocation(Constants.START, new GeoLocation(startPointLatLng.latitude, startPointLatLng.longitude));
 
         GeoFire geoFireEnd = new GeoFire(tripDBReference);
-        geoFire.setLocation("end", new GeoLocation(destLatLng.latitude, destLatLng.longitude));
+        geoFire.setLocation(Constants.END, new GeoLocation(destLatLng.latitude, destLatLng.longitude));
 
 
         Map<String, Object> map = new HashMap<>();
-        map.put("admin", userId);
+        map.put(Constants.ADMIN, userId);
+        map.put(Constants.CREATED_TIME, Utility.getCurrentTime());
         tripDBReference.updateChildren(map);
 
 
         //adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("Admin").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
-        startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title("Start").icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
-        endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title("End").icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
+        startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title(Constants.START).icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
+        endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title(Constants.END).icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
 
 
     }
 
     private void updateUsersToTrip() {
-        DatabaseReference adminRef = FirebaseDatabase.getInstance().getReference("Users").child(userId);
+        DatabaseReference adminRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
         Map<String, Object> map = new HashMap<>();
-        map.put("onTrip", true);
+        map.put(Constants.ON_TRIP, true);
     }
 
     private void endTrip() {
@@ -526,13 +537,13 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             adminMarker.remove();
         }
         linearLayout.setVisibility(View.VISIBLE);
-        startTripButton.setText("Start Trip");
+        startTripButton.setText(Constants.START_TRIP);
         tripIdTextView.setVisibility(View.GONE);
         removeTripId();
     }
 
     private void removeTripId() {
-        DatabaseReference historyDB = FirebaseDatabase.getInstance().getReference("History").child(tripID);
+        DatabaseReference historyDB = FirebaseDatabase.getInstance().getReference(Constants.HISTORY).child(tripID);
         tripDBReference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -570,6 +581,16 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.setTrafficEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
+        View locationButton = ((View) mapView.findViewById(Integer.parseInt("1")).getParent()).findViewById(Integer.parseInt("2"));
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
+
+        int[] ruleList = layoutParams.getRules();
+        for (int i = 0; i < ruleList.length; i++) {
+            layoutParams.removeRule(i);
+        }
+
+        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
 
 
 

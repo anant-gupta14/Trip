@@ -11,4 +11,16 @@ public interface Constants {
     String BIKE = "Bike";
     String HUMAN = "Human";
 
+    String WALK = "Walk";
+    String BACK_MENU = "BACK_MENU";
+    String MENU_ACTIVITY = "MENU_ACTIVITY";
+    String TRIP = "Trip";
+    String START = "start";
+    String END = "end";
+    String ADMIN = "admin";
+    String CREATED_TIME = "createdTime";
+    String ON_TRIP = "onTrip";
+    String START_TRIP = "Start Trip";
+    String HISTORY = "History";
+    String TRIP_ID = "tripId";
 }

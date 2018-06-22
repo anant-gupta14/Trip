@@ -1,5 +1,6 @@
 package com.dev.infinitoz.trip;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.Button;
@@ -86,8 +87,8 @@ public class UserProfileActivity extends AppCompatActivity {
                             case Constants.BIKE:
                                 vehicleGroup.check(R.id.userBike);
                                 break;
-                            case Constants.HUMAN:
-                                vehicleGroup.check(R.id.human);
+                            case Constants.WALK:
+                                vehicleGroup.check(R.id.walk);
                                 break;
                         }
                     }
@@ -109,5 +110,18 @@ public class UserProfileActivity extends AppCompatActivity {
         userPhone = findViewById(R.id.userPhone);
         vehicleGroup = findViewById(R.id.vehicleGroup);
         updateButton = findViewById(R.id.updateButton);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // super.onBackPressed();
+        String className = getIntent().getExtras().getString(Constants.BACK_MENU);
+        Intent intent = null;
+        if (Constants.MENU_ACTIVITY.equals(className)) {
+            intent = new Intent(UserProfileActivity.this, MenuActivity.class);
+        }
+        startActivity(intent);
+        finish();
+        return;
     }
 }

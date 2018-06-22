@@ -3,9 +3,6 @@
     <item
         android:id="@+id/userProfile"
         android:title="Profile" />
-    <item
-        android:id="@+id/vehicleType"
-        android:title="Vehicle" />
 
     <item
         android:id="@+id/contactUs"
