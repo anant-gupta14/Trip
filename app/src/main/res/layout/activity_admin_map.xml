@@ -52,6 +52,11 @@
                      android:layout_height="wrap_content"
                      android:visibility="gone" />
              </LinearLayout>-->
+            <TextView
+                android:id="@+id/tripId"
+                android:layout_width="100dp"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
 
             <android.support.v7.widget.CardView
                 android:layout_width="match_parent"

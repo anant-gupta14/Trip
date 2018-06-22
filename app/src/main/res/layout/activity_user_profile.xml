@@ -43,10 +43,10 @@
             android:text="Bike" />
 
         <RadioButton
-            android:id="@+id/human"
+            android:id="@+id/walk"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Human" />
+            android:text="Walk" />
     </RadioGroup>
 
     <Button

@@ -6,12 +6,19 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.annotation.NonNull;
+import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
+import android.support.v7.app.AppCompatActivity;
+import android.view.MenuItem;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
@@ -39,7 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class UserMapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
@@ -53,6 +60,11 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
     private Marker myMarker, startMarker, endMarker, adminMarker;
     private boolean isBasicTripInfoCaptured;
     private List<Marker> userMarkers;
+    private SupportMapFragment mapFragment;
+    private View mapView;
+    private DrawerLayout drawerLayout;
+    private ActionBarDrawerToggle drawerToggle;
+    private NavigationView navigationView;
 
     private ValueEventListener tripValueEventListener;
     LocationCallback locationCallback = new LocationCallback() {
@@ -78,7 +90,7 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_user_maps);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         //fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -91,21 +103,74 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
 
     private void initialize() {
 
-        logout = findViewById(R.id.logout);
+        //logout = findViewById(R.id.logout);
         leaveTripButton = findViewById(R.id.leaveTrip);
+        drawerLayout = findViewById(R.id.nav);
+        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.open, R.string.close);
+        mapView = mapFragment.getView();
+
+        navigationView = findViewById(R.id.navView);
+        navigationView.bringToFront();
+        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
+            @Override
+            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+                int id = item.getItemId();
+                Intent intent = null;
+                switch (id) {
+                    case R.id.userProfile:
+                        intent = new Intent(UserMapsActivity.this, UserProfileActivity.class);
+                        startActivity(intent);
+                        finish();
+                        break;
+                    case R.id.contactUs:
+                        break;
+                    case R.id.privacyPolicy:
+                        break;
+                    case R.id.changePass:
+                        break;
+                    case R.id.logoutNav:
+                        FirebaseAuth.getInstance().signOut();
+                        intent = new Intent(UserMapsActivity.this, MainActivity.class);
+                        startActivity(intent);
+                        finish();
+                        break;
+                }
+                return true;
+            }
+        });
+
     }
 
     private void setListeners() {
-        logout.setOnClickListener((v) -> {
+        /*logout.setOnClickListener((v) -> {
             FirebaseAuth.getInstance().signOut();
             Intent intent = new Intent(UserMapsActivity.this, MainActivity.class);
             startActivity(intent);
             finish();
             return;
-        });
+        });*/
+
+        drawerLayout.addDrawerListener(drawerToggle);
+        drawerToggle.syncState();
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         leaveTripButton.setOnClickListener((view) -> {
+
+            tripDatabaseReference.child("Users").child(userId).removeValue();
+            Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
+            startActivity(intent);
+            finish();
+            return;
+
         });
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (drawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void fetchTripDetails() {
@@ -245,6 +310,17 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
         locationRequest.setFastestInterval(3000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
 
+        View locationButton = ((View) mapView.findViewById(Integer.parseInt("1")).getParent()).findViewById(Integer.parseInt("2"));
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
+
+        int[] ruleList = layoutParams.getRules();
+        for (int i = 0; i < ruleList.length; i++) {
+            layoutParams.removeRule(i);
+        }
+
+        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
+
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             /*if(ContextCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED){
 
@@ -275,5 +351,16 @@ public class UserMapsActivity extends FragmentActivity implements OnMapReadyCall
     }
 
     private void getAdminUsersDetails() {
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (fusedLocationProviderClient != null) {
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+            fusedLocationProviderClient = null;
+            locationRequest = null;
+        }
+
     }
 }

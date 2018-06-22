@@ -26,6 +26,7 @@ import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -85,6 +86,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private LatLng startPointLatLng, destLatLng, currentLocation;
     private String startPoint, endPoint, tripID, userId;
     private PlaceAutocompleteFragment startAutocompleteFragment, destAutocompleteFragment;
+    private SupportMapFragment mapFragment;
+    private View mapView;
 
     private Button logout, startTripButton;
     private boolean isTripStarted;
@@ -361,7 +364,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_map);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -377,6 +380,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         startTripButton = findViewById(R.id.createTrip);
         drawerLayout = findViewById(R.id.nav);
         drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.open, R.string.close);
+        mapView = mapFragment.getView();
 
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
@@ -392,21 +396,27 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
                 int id = item.getItemId();
-
+                Intent intent = null;
                 switch (id) {
-
                     case R.id.userProfile:
-                        break;
-                    case R.id.logoutNav:
-                        FirebaseAuth.getInstance().signOut();
-                        Intent intent = new Intent(AdminMapActivity.this, MainActivity.class);
+                        intent = new Intent(AdminMapActivity.this, UserProfileActivity.class);
                         startActivity(intent);
                         finish();
                         break;
-                    case R.id.vehicleType:
+                    case R.id.contactUs:
+                        break;
+                    case R.id.privacyPolicy:
+                        break;
+                    case R.id.changePass:
+                        break;
+                    case R.id.logoutNav:
+                        FirebaseAuth.getInstance().signOut();
+                        intent = new Intent(AdminMapActivity.this, MainActivity.class);
+                        startActivity(intent);
+                        finish();
                         break;
                 }
-                return false;
+                return true;
             }
         });
 
@@ -570,6 +580,16 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.setTrafficEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
+        View locationButton = ((View) mapView.findViewById(Integer.parseInt("1")).getParent()).findViewById(Integer.parseInt("2"));
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
+
+        int[] ruleList = layoutParams.getRules();
+        for (int i = 0; i < ruleList.length; i++) {
+            layoutParams.removeRule(i);
+        }
+
+        layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
+        layoutParams.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, RelativeLayout.TRUE);
 
 
 

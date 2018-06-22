@@ -86,8 +86,8 @@ public class UserProfileActivity extends AppCompatActivity {
                             case Constants.BIKE:
                                 vehicleGroup.check(R.id.userBike);
                                 break;
-                            case Constants.HUMAN:
-                                vehicleGroup.check(R.id.human);
+                            case Constants.WALK:
+                                vehicleGroup.check(R.id.walk);
                                 break;
                         }
                     }

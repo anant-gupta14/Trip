@@ -11,4 +11,5 @@ public interface Constants {
     String BIKE = "Bike";
     String HUMAN = "Human";
 
+    String WALK = "Walk";
 }
