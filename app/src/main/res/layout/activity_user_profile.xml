@@ -6,11 +6,6 @@
     android:orientation="vertical"
     tools:context=".UserProfileActivity">
 
-    <TextView
-        android:id="@+id/userEmail"
-        android:layout_width="match_parent"
-        android:layout_height="30sp"
-        android:text="user@email.com" />
 
     <EditText
         android:id="@+id/userName"

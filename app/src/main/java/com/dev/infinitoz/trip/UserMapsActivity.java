@@ -6,20 +6,16 @@ import android.location.Location;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.design.widget.NavigationView;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.RelativeLayout;
 
+import com.dev.infinitoz.TripContext;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -35,7 +31,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -43,6 +39,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -62,9 +59,6 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private List<Marker> userMarkers;
     private SupportMapFragment mapFragment;
     private View mapView;
-    private DrawerLayout drawerLayout;
-    private ActionBarDrawerToggle drawerToggle;
-    private NavigationView navigationView;
 
     private ValueEventListener tripValueEventListener;
     LocationCallback locationCallback = new LocationCallback() {
@@ -77,7 +71,6 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                     lastLocation = location;
                     fetchTripDetails();
                     getTripInfo();
-                    getAdminUsersDetails();
                     getOtherUsers();
                 }
             }
@@ -105,39 +98,9 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
         //logout = findViewById(R.id.logout);
         leaveTripButton = findViewById(R.id.leaveTrip);
-        drawerLayout = findViewById(R.id.nav);
-        drawerToggle = new ActionBarDrawerToggle(this, drawerLayout, R.string.open, R.string.close);
+
         mapView = mapFragment.getView();
 
-        navigationView = findViewById(R.id.navView);
-        navigationView.bringToFront();
-        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
-            @Override
-            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                int id = item.getItemId();
-                Intent intent = null;
-                switch (id) {
-                    case R.id.userProfile:
-                        intent = new Intent(UserMapsActivity.this, UserProfileActivity.class);
-                        startActivity(intent);
-                        finish();
-                        break;
-                    case R.id.contactUs:
-                        break;
-                    case R.id.privacyPolicy:
-                        break;
-                    case R.id.changePass:
-                        break;
-                    case R.id.logoutNav:
-                        FirebaseAuth.getInstance().signOut();
-                        intent = new Intent(UserMapsActivity.this, MainActivity.class);
-                        startActivity(intent);
-                        finish();
-                        break;
-                }
-                return true;
-            }
-        });
 
     }
 
@@ -150,13 +113,11 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             return;
         });*/
 
-        drawerLayout.addDrawerListener(drawerToggle);
-        drawerToggle.syncState();
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         leaveTripButton.setOnClickListener((view) -> {
-
+            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
             tripDatabaseReference.child("Users").child(userId).removeValue();
+            updateUserToTrip(false);
             Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
             startActivity(intent);
             finish();
@@ -165,21 +126,28 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         });
     }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (drawerToggle.onOptionsItemSelected(item)) {
-            return true;
+    private void fetchTripDetails() {
+        if (isBasicTripInfoCaptured) {
+            return;
         }
-        return super.onOptionsItemSelected(item);
+        tripDatabaseReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId);
+        FirebaseUser user = (FirebaseUser) TripContext.getValue(Constants.USER);
+        userId = user.getUid();
+        updateUserToTrip(true);
+        isBasicTripInfoCaptured = true;
     }
 
-    private void fetchTripDetails() {
-        tripDatabaseReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId);
-        userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
+    private void updateUserToTrip(boolean value) {
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
+        Map<String, Object> map = new HashMap<>();
+        map.put(Constants.ON_TRIP, value);
+        userRef.updateChildren(map);
+    }
 
-
+    private void getTripInfo() {
         currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
         DatabaseReference userDBRef = tripDatabaseReference.child(Constants.USERS);
         GeoFire geoFire = new GeoFire(userDBRef);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
@@ -193,17 +161,15 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title(Constants.START).icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
             endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title(Constants.END).icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
         }
-
-    }
-
-    private void getTripInfo() {
+        tripDatabaseReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId);
+        FirebaseUser user = (FirebaseUser) TripContext.getValue(Constants.USER);
+        userId = user.getUid();
         tripValueEventListener = tripDatabaseReference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 // Log.d("listneres", "reached inside the datasnaphot");
                 //dataSnapshot.exists();
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                    isBasicTripInfoCaptured = true;
                     Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
                     if (startPointLatLng == null) {
 
@@ -234,6 +200,12 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                     adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
                     //}
 
+                    if (isBasicTripInfoCaptured) {
+                        return;
+                    }
+
+                    updateUserToTrip(true);
+                    isBasicTripInfoCaptured = true;
                 }
 
             }
@@ -350,8 +322,6 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
-    private void getAdminUsersDetails() {
-    }
 
     @Override
     protected void onStop() {

@@ -3,11 +3,11 @@ package com.dev.infinitoz.trip;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.MenuItem;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
@@ -23,7 +23,6 @@ import java.util.Map;
 
 public class UserProfileActivity extends AppCompatActivity {
 
-    private TextView userEmailTextView;
     private EditText userName, userPhone;
     private RadioGroup vehicleGroup;
     private Button updateButton;
@@ -105,23 +104,32 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     private void initalize() {
-        userEmailTextView = findViewById(R.id.userEmail);
         userName = findViewById(R.id.userName);
         userPhone = findViewById(R.id.userPhone);
         vehicleGroup = findViewById(R.id.vehicleGroup);
         updateButton = findViewById(R.id.updateButton);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+        if (id == android.R.id.home) {
+            mainMenuIntent();
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
     public void onBackPressed() {
-        // super.onBackPressed();
-        String className = getIntent().getExtras().getString(Constants.BACK_MENU);
-        Intent intent = null;
-        if (Constants.MENU_ACTIVITY.equals(className)) {
-            intent = new Intent(UserProfileActivity.this, MenuActivity.class);
-        }
+        mainMenuIntent();
+        return;
+    }
+
+    private void mainMenuIntent() {
+        Intent intent = new Intent(UserProfileActivity.this, MenuActivity.class);
         startActivity(intent);
         finish();
-        return;
     }
 }
