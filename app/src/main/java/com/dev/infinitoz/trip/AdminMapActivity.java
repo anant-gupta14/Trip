@@ -2,6 +2,7 @@ package com.dev.infinitoz.trip;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
@@ -84,8 +85,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private SupportMapFragment mapFragment;
     private View mapView;
 
-    private Button logout, startTripButton;
-    private boolean isTripStarted;
+    private Button logout, startTripButton, shareTripButton;
+    private boolean isTripStarted, isReloadTrip;
 
     private Location lastLocation;
 
@@ -106,7 +107,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                     lastLocation = location;
                     currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
                     mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
-                    mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+
                     if (tripDBReference != null) {
                         if (isTripStarted) {
                             GeoFire geoFire = new GeoFire(tripDBReference);
@@ -372,6 +373,50 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         initialize();
 
         setListeners();
+        if (TripContext.getValue(Constants.RELOAD_TRIP) != null) {
+            tripID = (String) TripContext.getValue(Constants.TRIP_ID);
+            userId = ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid();
+            isReloadTrip = true;
+            relaodTrip();
+        }
+
+    }
+
+    private void relaodTrip() {
+        tripDBReference = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripID);
+        tripDBReference.addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                    Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
+                    if (map.get(Constants.START) != null) {
+                        Map<String, Object> startPointMap = (Map<String, Object>) map.get(Constants.START);
+                        List<Object> list = (List<Object>) startPointMap.get("l");
+                        startPointLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                    }
+                    if (map.get(Constants.END) != null) {
+                        Map<String, Object> endPointMap = (Map<String, Object>) map.get(Constants.END);
+                        List<Object> list = (List<Object>) endPointMap.get("l");
+                        destLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                    }
+
+                    if (map.get(userId) != null) {
+                        Map<String, Object> endPointMap = (Map<String, Object>) map.get(userId);
+                        List<Object> list = (List<Object>) endPointMap.get("l");
+                        lastLocation = new Location("");
+                        lastLocation.setLatitude(Double.parseDouble(list.get(0).toString()));
+                        lastLocation.setLongitude(Double.parseDouble(list.get(1).toString()));
+                    }
+                    createTrip();
+                    TripContext.removeValue(Constants.RELOAD_TRIP);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
 
     }
 
@@ -382,6 +427,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         //logout = findViewById(R.id.logout);
         startTripButton = findViewById(R.id.createTrip);
         mapView = mapFragment.getView();
+        shareTripButton = findViewById(R.id.shareTrip);
 
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
@@ -431,29 +477,43 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         startTripButton.setOnClickListener((view) -> {
             createTrip();
         });
+
+        shareTripButton.setOnClickListener(v -> {
+            Intent textIntent = new Intent();
+            textIntent.setAction(Intent.ACTION_SEND);
+            textIntent.putExtra(Intent.EXTRA_TEXT, Constants.Trip_TEXT + tripID);
+            textIntent.setType("text/plain");
+            //whatsAppIntent.setPackage("com.whatsapp");
+            startActivity(Intent.createChooser(textIntent, getResources().getText(R.string.chooser_text)));
+        });
     }
 
     private void createTrip() {
         if (isTripStarted) {
             endTrip();
-            //tripDBReference.removeValue();
             return;
         }
         isTripStarted = true;
+        if (TripContext.getValue(Constants.RELOAD_TRIP) == null) {
+            tripID = Utility.generateTripId(userId);
+        }
         setStartAndDestLocation();
-        updateUserToTrip(true);
+        Utility.updateUserToTrip(true, userId);
+        Utility.updateTripIdToUser(true, userId);
 
         startTripButton.setText(Constants.END_TRIP);
         linearLayout.setVisibility(View.GONE);
         tripIdTextView.setBackgroundColor(R.color.colorAccent);
         tripIdTextView.setText(tripID);
         tripIdTextView.setVisibility(View.VISIBLE);
+        shareTripButton.setVisibility(View.VISIBLE);
 
     }
 
     private void setStartAndDestLocation() {
         userId = ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid();
-        tripID = Utility.generateTripId(userId);
+
+        TripContext.addValue(Constants.TRIP_ID, tripID);
         tripDBReference = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripID);
         GeoFire geoFire = new GeoFire(tripDBReference);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
@@ -464,11 +524,12 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         GeoFire geoFireEnd = new GeoFire(tripDBReference);
         geoFire.setLocation(Constants.END, new GeoLocation(destLatLng.latitude, destLatLng.longitude));
 
-
-        Map<String, Object> map = new HashMap<>();
-        map.put(Constants.ADMIN, userId);
-        map.put(Constants.CREATED_TIME, Utility.getCurrentTime());
-        tripDBReference.updateChildren(map);
+        if (!isReloadTrip) {
+            Map<String, Object> map = new HashMap<>();
+            map.put(Constants.ADMIN, userId);
+            map.put(Constants.CREATED_TIME, Utility.getCurrentTime());
+            tripDBReference.updateChildren(map);
+        }
 
 
         //adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("Admin").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
@@ -478,12 +539,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
     }
 
-    private void updateUserToTrip(boolean value) {
-        DatabaseReference adminRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
-        Map<String, Object> map = new HashMap<>();
-        map.put(Constants.ON_TRIP, value);
-        adminRef.updateChildren(map);
-    }
+
 
     private void endTrip() {
         isTripStarted = false;
@@ -499,8 +555,10 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         linearLayout.setVisibility(View.VISIBLE);
         startTripButton.setText(Constants.START_TRIP);
         tripIdTextView.setVisibility(View.GONE);
+        shareTripButton.setVisibility(View.GONE);
         removeTripId();
-        updateUserToTrip(false);
+        Utility.updateUserToTrip(false, userId);
+        Utility.updateTripIdToUser(false, userId);
     }
 
     private void removeTripId() {
@@ -541,6 +599,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
         mMap.setTrafficEnabled(true);
         mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
         View locationButton = ((View) mapView.findViewById(Integer.parseInt("1")).getParent()).findViewById(Integer.parseInt("2"));
         RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
 
@@ -603,5 +662,15 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                 }
                 break;
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (!isTripStarted) {
+            Intent intent = new Intent(AdminMapActivity.this, MenuActivity.class);
+            startActivity(intent);
+            return;
+        }
+
     }
 }

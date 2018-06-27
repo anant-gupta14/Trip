@@ -24,4 +24,6 @@ public interface Constants {
     String HISTORY = "History";
     String TRIP_ID = "tripId";
     String END_TRIP = "End Trip";
+    String Trip_TEXT = "Hey there!! Please find pickup your trip code : ";
+    String RELOAD_TRIP = "RELOAD_TRIP";
 }

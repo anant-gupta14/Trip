@@ -32,4 +32,8 @@ public class TripContext {
         map.put(key, value);
     }
 
+    public static Object removeValue(String key) {
+        return map.remove(key);
+    }
+
 }

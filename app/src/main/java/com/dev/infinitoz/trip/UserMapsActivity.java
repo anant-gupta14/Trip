@@ -16,6 +16,7 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -39,7 +40,6 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -117,7 +117,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         leaveTripButton.setOnClickListener((view) -> {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
             tripDatabaseReference.child("Users").child(userId).removeValue();
-            updateUserToTrip(false);
+            Utility.updateUserToTrip(false, userId);
             Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
             startActivity(intent);
             finish();
@@ -133,21 +133,14 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         tripDatabaseReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId);
         FirebaseUser user = (FirebaseUser) TripContext.getValue(Constants.USER);
         userId = user.getUid();
-        updateUserToTrip(true);
+        Utility.updateUserToTrip(true, userId);
         isBasicTripInfoCaptured = true;
-    }
-
-    private void updateUserToTrip(boolean value) {
-        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
-        Map<String, Object> map = new HashMap<>();
-        map.put(Constants.ON_TRIP, value);
-        userRef.updateChildren(map);
     }
 
     private void getTripInfo() {
         currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
+
         DatabaseReference userDBRef = tripDatabaseReference.child(Constants.USERS);
         GeoFire geoFire = new GeoFire(userDBRef);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
@@ -204,7 +197,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         return;
                     }
 
-                    updateUserToTrip(true);
+                    Utility.updateUserToTrip(true, userId);
                     isBasicTripInfoCaptured = true;
                 }
 
@@ -281,6 +274,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         locationRequest.setInterval(3000);
         locationRequest.setFastestInterval(3000);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(15));
 
         View locationButton = ((View) mapView.findViewById(Integer.parseInt("1")).getParent()).findViewById(Integer.parseInt("2"));
         RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
@@ -326,11 +320,16 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     @Override
     protected void onStop() {
         super.onStop();
-        if (fusedLocationProviderClient != null) {
+       /* if (fusedLocationProviderClient != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallback);
             fusedLocationProviderClient = null;
             locationRequest = null;
-        }
+        }*/
 
+    }
+
+    @Override
+    public void onBackPressed() {
+        //super.onBackPressed();
     }
 }

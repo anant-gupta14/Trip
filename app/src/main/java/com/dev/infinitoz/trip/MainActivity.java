@@ -5,11 +5,14 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.service.OnAppKilledService;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
@@ -20,7 +23,6 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
-import com.squareup.otto.Subscribe;
 
 import java.util.Map;
 
@@ -39,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
 
     boolean isUserAvailable;
     private String userId;
+    private RelativeLayout progressBar;
     //private  static Bus bus;
 
     @Override
@@ -51,17 +54,21 @@ public class MainActivity extends AppCompatActivity {
 
         mLogin = findViewById(R.id.login);
         mRegistration = findViewById(R.id.registration);
+        progressBar = findViewById(R.id.loadingPanel);
+        startService(new Intent(MainActivity.this, OnAppKilledService.class));
 
         // bus = new Bus(ThreadEnforcer.MAIN);
         mAuth = FirebaseAuth.getInstance();
         fireBaseAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
+
                 FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                 if (user != null) {
                     TripContext.addValue(Constants.USER, user);
                     userId = user.getUid();
                     checkUserAvailable();
+
                     return;
                 }
 
@@ -115,6 +122,8 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void checkUserAvailable() {
+        progressBar.setVisibility(View.VISIBLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
         DatabaseReference adminRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
         adminRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -122,13 +131,16 @@ public class MainActivity extends AppCompatActivity {
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
                     Map<String, Object> userDataMap = (Map<String, Object>) dataSnapshot.getValue();
                     if (userDataMap.get(Constants.ON_TRIP) != null && !(boolean) userDataMap.get(Constants.ON_TRIP)) {
-                        Intent intent = new Intent(MainActivity.this, MenuActivity.class);
-                        startActivity(intent);
-                        finish();
+                        checkIsAnyTripActive(userDataMap);
+
+                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                        progressBar.setVisibility(View.GONE);
                         //bus.post(intent);
                         return;
                     }
                     Toast.makeText(MainActivity.this, "User already in on going trip", Toast.LENGTH_SHORT).show();
+                    getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                    progressBar.setVisibility(View.GONE);
                     return;
                 }
             }
@@ -138,13 +150,51 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
     }
 
-    @Subscribe
-    private void callNextActivity(Intent intent) {
+    private void checkIsAnyTripActive(Map<String, Object> userDataMap) {
+        String tripID = (String) userDataMap.get(Constants.TRIP_ID);
+        TripContext.addValue(Constants.TRIP_ID, tripID);
+        if (tripID != null) {
+            FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripID).addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                        Map<String, Object> tripDataMap = (Map<String, Object>) dataSnapshot.getValue();
+                        String adminID = (String) tripDataMap.get(Constants.ADMIN);
+                        Intent intent = null;
+                        TripContext.addValue(Constants.RELOAD_TRIP, true);
+                        if (adminID != null) {
+                            if (adminID.equals(userId)) {
+                                intent = new Intent(MainActivity.this, AdminMapActivity.class);
+                            } else {
+                                intent = new Intent(MainActivity.this, UserMapsActivity.class);
+                            }
+                        }
+                        startActivity(intent);
+                        return;
+                        //finish();
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+
+        }
+        Intent intent = new Intent(MainActivity.this, MenuActivity.class);
         startActivity(intent);
         finish();
     }
+
+   /* @Subscribe
+    private void callNextActivity(Intent intent) {
+        startActivity(intent);
+        finish();
+    }*/
 
     @Override
     protected void onStop() {
