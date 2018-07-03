@@ -9,6 +9,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
     boolean isUserAvailable;
     private String userId;
     private RelativeLayout progressBar;
+    private TextView forgotPassTextView;
     //private  static Bus bus;
 
     @Override
@@ -55,6 +57,7 @@ public class MainActivity extends AppCompatActivity {
         mLogin = findViewById(R.id.login);
         mRegistration = findViewById(R.id.registration);
         progressBar = findViewById(R.id.loadingPanel);
+        forgotPassTextView = findViewById(R.id.forgotPass);
         startService(new Intent(MainActivity.this, OnAppKilledService.class));
 
         // bus = new Bus(ThreadEnforcer.MAIN);
@@ -117,6 +120,14 @@ public class MainActivity extends AppCompatActivity {
             });
 
 
+        });
+
+        forgotPassTextView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(MainActivity.this, ForgotPasswordActivity.class));
+                finish();
+            }
         });
     }
 

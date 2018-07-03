@@ -14,6 +14,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dev.infinitoz.ChangePasswordActivity;
 import com.dev.infinitoz.TripContext;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.firebase.auth.FirebaseAuth;
@@ -106,6 +107,9 @@ public class MenuActivity extends AppCompatActivity {
                     case R.id.privacyPolicy:
                         break;
                     case R.id.changePass:
+                        intent = new Intent(MenuActivity.this, ChangePasswordActivity.class);
+                        startActivity(intent);
+                        finish();
                         break;
                     case R.id.logoutNav:
                         FirebaseAuth.getInstance().signOut();

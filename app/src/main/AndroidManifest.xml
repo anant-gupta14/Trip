@@ -16,6 +16,7 @@
         <service
             android:name="com.dev.infinitoz.service.OnAppKilledService"
             android:stopWithTask="false" />
+
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -26,6 +27,7 @@
         <activity android:name=".MenuActivity" />
         <activity android:name=".UserTripActivity" />
         <activity android:name=".StartTripActivity" />
+        <activity android:name=".ForgotPasswordActivity" />
         <!--
              The API key for Google Maps-based APIs is defined as a string resource.
              (See the file "res/values/google_maps_api.xml").
@@ -47,7 +49,9 @@
         <activity
             android:name=".UserMapsActivity"
             android:label="@string/title_activity_user_maps" />
-        <activity android:name=".UserProfileActivity"></activity>
+        <activity android:name=".UserProfileActivity" />
+        <activity android:name=".ForgotPassword" />
+        <activity android:name="com.dev.infinitoz.ChangePasswordActivity"></activity>
     </application>
 
 </manifest>

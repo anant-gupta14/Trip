@@ -10,6 +10,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -18,6 +19,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
+import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -44,6 +46,7 @@ import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
@@ -95,6 +98,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private TextView tripIdTextView;
     private DatabaseReference tripDBReference;
     private List<Marker> userMarkers;
+    private List<LatLng> directionLatLngs = new ArrayList<>();
 
     private ImageView appImageView;
     LocationCallback locationCallback = new LocationCallback() {
@@ -106,6 +110,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                     //on location changes code
                     lastLocation = location;
                     currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+                    directionLatLngs.add(currentLocation);
                     mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
 
                     if (tripDBReference != null) {
@@ -113,13 +118,14 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                             GeoFire geoFire = new GeoFire(tripDBReference);
                             geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
                         }
-                        if (adminMarker != null) {
+                       /* if (adminMarker != null) {
                             adminMarker.remove();
-                        }
+                        }*/
 
-                        adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
+                        // adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
                         // animateCar();
                         getOtherUsers();
+                        //setAnimation(mMap,directionLatLngs);
                     }
                 }
             }
@@ -662,6 +668,55 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                 }
                 break;
         }
+    }
+
+    public static void setAnimation(GoogleMap myMap, final List<LatLng> directionPoint) {
+
+
+        Marker marker = myMap.addMarker(new MarkerOptions()
+                .icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car_top))
+                .position(directionPoint.get(0))
+                .flat(true));
+
+        myMap.animateCamera(CameraUpdateFactory.newLatLngZoom(directionPoint.get(0), 10));
+
+        animateMarker(myMap, marker, directionPoint, false);
+    }
+
+    private static void animateMarker(GoogleMap myMap, final Marker marker, final List<LatLng> directionPoint,
+                                      final boolean hideMarker) {
+        final Handler handler = new Handler();
+        final long start = SystemClock.uptimeMillis();
+        Projection proj = myMap.getProjection();
+        final long duration = 30000;
+
+        final Interpolator interpolator = new LinearInterpolator();
+
+        handler.post(new Runnable() {
+            int i = 0;
+
+            @Override
+            public void run() {
+                long elapsed = SystemClock.uptimeMillis() - start;
+                float t = interpolator.getInterpolation((float) elapsed
+                        / duration);
+                if (i < directionPoint.size())
+                    marker.setPosition(directionPoint.get(i));
+                i++;
+
+
+                if (t < 1.0) {
+                    // Post again 16ms later.
+                    handler.postDelayed(this, 16);
+                } else {
+                    if (hideMarker) {
+                        marker.setVisible(false);
+                    } else {
+                        marker.setVisible(true);
+                    }
+                }
+            }
+        });
     }
 
     @Override
