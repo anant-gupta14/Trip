@@ -33,6 +33,9 @@ import com.dev.infinitoz.remote.IGoogleApi;
 import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -101,6 +104,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private List<LatLng> directionLatLngs = new ArrayList<>();
 
     private ImageView appImageView;
+    private AdView adView;
     LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
@@ -376,6 +380,11 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         mapFragment.getMapAsync(this);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+        MobileAds.initialize(this, "ca-app-pub-3940256099942544~3347511713");
+        adView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().addTestDevice("8D8CED2F4594A1FD38529F7D241C99BF").build();
+        adView.loadAd(adRequest);
         initialize();
 
         setListeners();
