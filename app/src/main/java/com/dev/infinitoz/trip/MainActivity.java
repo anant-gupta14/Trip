@@ -25,11 +25,8 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.util.HashMap;
 import java.util.Map;
-
-interface OngetData {
-    void onSuccess(DataSnapshot dataSnapshot);
-}
 
 public class MainActivity extends AppCompatActivity {
 
@@ -60,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
         forgotPassTextView = findViewById(R.id.forgotPass);
         startService(new Intent(MainActivity.this, OnAppKilledService.class));
 
-        // bus = new Bus(ThreadEnforcer.MAIN);
         mAuth = FirebaseAuth.getInstance();
         fireBaseAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
@@ -70,8 +66,13 @@ public class MainActivity extends AppCompatActivity {
                 if (user != null) {
                     TripContext.addValue(Constants.USER, user);
                     userId = user.getUid();
+                    //email verfication
+                    /*if(!user.isEmailVerified()){
+                        Intent intent = new Intent(MainActivity.this,VerifyEmailActivity.class);
+                        startActivity(intent);
+                        return;
+                    }*/
                     checkUserAvailable();
-
                     return;
                 }
 
@@ -92,6 +93,9 @@ public class MainActivity extends AppCompatActivity {
                             String user_id = mAuth.getCurrentUser().getUid();
                             DatabaseReference currentUserDb = FirebaseDatabase.getInstance().getReference().child("Users").child(user_id);
                             currentUserDb.setValue(true);
+                            Map<String, Object> userMap = new HashMap<>();
+                            userMap.put(Constants.ON_TRIP, false);
+                            currentUserDb.updateChildren(userMap);
                         }
                     }
                 });
@@ -135,12 +139,19 @@ public class MainActivity extends AppCompatActivity {
     private void checkUserAvailable() {
         progressBar.setVisibility(View.VISIBLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
-        DatabaseReference adminRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
-        adminRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
+        userRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
                     Map<String, Object> userDataMap = (Map<String, Object>) dataSnapshot.getValue();
+                    if (userDataMap.get(Constants.NAME) == null) {
+                        Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
+                        startActivity(intent);
+                        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                        progressBar.setVisibility(View.GONE);
+                        return;
+                    }
                     if (userDataMap.get(Constants.ON_TRIP) != null && !(boolean) userDataMap.get(Constants.ON_TRIP)) {
                         checkIsAnyTripActive(userDataMap);
 
@@ -217,19 +228,5 @@ public class MainActivity extends AppCompatActivity {
     protected void onStart() {
         super.onStart();
         mAuth.addAuthStateListener(fireBaseAuthListener);
-    }
-
-    private void readData(DatabaseReference reference, OngetData ongetData) {
-        reference.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                ongetData.onSuccess(dataSnapshot);
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
     }
 }

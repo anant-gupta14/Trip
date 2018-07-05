@@ -4,10 +4,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
@@ -29,6 +32,7 @@ public class UserProfileActivity extends AppCompatActivity {
 
     private FirebaseUser user;
     private DatabaseReference userDBRef;
+    private RelativeLayout progressBar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,7 +42,11 @@ public class UserProfileActivity extends AppCompatActivity {
         initalize();
         getUserInfo(user.getUid().toString());
         updateButton.setOnClickListener(v -> {
+            progressBar.setVisibility(View.VISIBLE);
+            getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
             saveUserProfie();
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+            progressBar.setVisibility(View.GONE);
         });
 
 
@@ -92,6 +100,8 @@ public class UserProfileActivity extends AppCompatActivity {
                         }
                     }
                 }
+                getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
+                progressBar.setVisibility(View.GONE);
             }
 
             @Override
@@ -110,6 +120,9 @@ public class UserProfileActivity extends AppCompatActivity {
         updateButton = findViewById(R.id.updateButton);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        progressBar = findViewById(R.id.loadingPanel);
+        progressBar.setVisibility(View.VISIBLE);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
     }
 
     @Override
