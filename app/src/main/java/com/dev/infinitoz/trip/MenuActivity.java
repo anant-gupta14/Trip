@@ -105,6 +105,8 @@ public class MenuActivity extends AppCompatActivity {
                     case R.id.contactUs:
                         break;
                     case R.id.privacyPolicy:
+                        intent = new Intent(MenuActivity.this, AdminManagementActivity.class);
+                        startActivity(intent);
                         break;
                     case R.id.changePass:
                         intent = new Intent(MenuActivity.this, ChangePasswordActivity.class);
