@@ -96,7 +96,7 @@ public class UserMapsActivity1 extends FragmentActivity implements OnMapReadyCal
 
         myMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("User").icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
         startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title("Start").icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
-        // endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title("End").icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
+        // endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title.xml("End").icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
 
 
     }

@@ -14,10 +14,12 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Interpolator;
 import android.view.animation.LinearInterpolator;
@@ -126,7 +128,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                             adminMarker.remove();
                         }*/
 
-                        // adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
+                        // adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title.xml(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
                         // animateCar();
                         getOtherUsers();
                         //setAnimation(mMap,directionLatLngs);
@@ -372,6 +374,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_admin_map);
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -381,12 +384,37 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+
         MobileAds.initialize(this, "ca-app-pub-3940256099942544~3347511713");
         adView = findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().addTestDevice("8D8CED2F4594A1FD38529F7D241C99BF").build();
         adView.loadAd(adRequest);
         initialize();
+        /*Toolbar toolbar = findViewById(R.id.toolbarAdmin);
+        TextView tv = findViewById(R.id.toolbar_title);
+        setSupportActionBar(toolbar);
+        tv.setOnClickListener(view -> {
+            Log.d("action bar clicked","true");
+        });
 
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setHomeButtonEnabled(true);
+*/
+
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayShowTitleEnabled(false);
+            actionBar.setDisplayShowCustomEnabled(true);
+            View customView = getLayoutInflater().inflate(R.layout.title, null);
+            TextView textView = customView.findViewById(R.id.toolbar_title);
+
+            textView.setOnClickListener(view -> {
+                Intent intent = new Intent(AdminMapActivity.this, AdminManagementActivity.class);
+                startActivity(intent);
+                finish();
+            });
+            actionBar.setCustomView(customView);
+        }
         setListeners();
         if (TripContext.getValue(Constants.RELOAD_TRIP) != null) {
             tripID = (String) TripContext.getValue(Constants.TRIP_ID);
@@ -443,6 +471,10 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         startTripButton = findViewById(R.id.createTrip);
         mapView = mapFragment.getView();
         shareTripButton = findViewById(R.id.shareTrip);
+        /*int id = getResources().getIdentifier("action_bar_title","id","android");
+        findViewById(id).setOnClickListener(v->{
+            Log.d("action bar clicked","true");
+        });*/
 
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
@@ -547,7 +579,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         }
 
 
-        //adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("Admin").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
+        //adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title.xml("Admin").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
         startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title(Constants.START).icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
         endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title(Constants.END).icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
 

@@ -65,7 +65,7 @@ public class AdminManagementActivity extends AppCompatActivity {
                     final Integer[] count = new Integer[1];
                     count[0] = 0;
                     for (String str : usersMap.keySet()) {
-                        FirebaseDatabase.getInstance().getReference(Constants.USERS).child(str).addValueEventListener(new ValueEventListener() {
+                        FirebaseDatabase.getInstance().getReference(Constants.USERS).child(str).addListenerForSingleValueEvent(new ValueEventListener() {
                             @Override
                             public void onDataChange(DataSnapshot dataSnapshot) {
                                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
@@ -183,6 +183,7 @@ public class AdminManagementActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
             holder.userName.setText(users.get(position).getName());
             holder.deleteBtn.setTag(position);
+            Log.d("position::", +position + "");
         }
 
         @Override

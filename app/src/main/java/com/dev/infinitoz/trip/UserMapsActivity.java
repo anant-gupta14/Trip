@@ -149,7 +149,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             myMarker.remove();
         }
 
-        //myMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title("User").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
+        //myMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title.xml("User").icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
         if (startPointLatLng != null && destLatLng != null && startMarker == null && endMarker == null) {
             startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title(Constants.START).icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
             endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title(Constants.END).icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
