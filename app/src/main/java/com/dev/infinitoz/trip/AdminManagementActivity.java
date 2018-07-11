@@ -53,7 +53,6 @@ public class AdminManagementActivity extends AppCompatActivity {
 
     private void populateUsers() {
         tripId = (String) TripContext.getValue(Constants.TRIP_ID);
-        tripId = "oTWn5";
         tripDBReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId).child(Constants.USERS);
 
         tripDBReference.addValueEventListener(new ValueEventListener() {
@@ -153,7 +152,7 @@ public class AdminManagementActivity extends AppCompatActivity {
     }
 
     private void removeUserFromTrip(String userId) {
-        tripDBReference.child(userId).removeValue();
+        Utility.removeUserFromTrip(true, userId, tripId);
         Utility.updateUserToTrip(false, userId);
     }
 

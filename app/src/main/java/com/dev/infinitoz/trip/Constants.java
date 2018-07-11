@@ -27,4 +27,5 @@ public interface Constants {
     String Trip_TEXT = "Hey there!! Please find pickup your trip code : ";
     String RELOAD_TRIP = "RELOAD_TRIP";
     String BASIC_INFO = "BASIC_INFO";
+    String IS_REMOVED = "isRemoved";
 }

@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
 import com.dev.infinitoz.trip.util.Utility;
@@ -51,7 +52,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private Location lastLocation;
     private Button logout, leaveTripButton;
     private String tripId;
-    private DatabaseReference tripDatabaseReference;
+    private DatabaseReference tripDatabaseReference, userTripDBRef;
     private String userId;
     private LatLng startPointLatLng, destLatLng, currentLocation, adminLatLng;
     private Marker myMarker, startMarker, endMarker, adminMarker;
@@ -70,13 +71,35 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                     //on location changes code
                     lastLocation = location;
                     fetchTripDetails();
-                    getTripInfo();
-                    getOtherUsers();
+                    checkTripAvailableForMe();
                 }
             }
 
         }
     };
+
+    private void checkTripAvailableForMe() {
+        userTripDBRef.child(userId).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                    Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
+                    if (map.get(Constants.IS_REMOVED) == null || !(boolean) map.get(Constants.IS_REMOVED)) {
+                        getTripInfo();
+                        getOtherUsers();
+                    } else {
+                        leaveTrip();
+                        Toast.makeText(UserMapsActivity.this, "You are not anymore with this trip :" + tripId, Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -115,15 +138,19 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
 
         leaveTripButton.setOnClickListener((view) -> {
-            fusedLocationProviderClient.removeLocationUpdates(locationCallback);
-            tripDatabaseReference.child("Users").child(userId).removeValue();
-            Utility.updateUserToTrip(false, userId);
-            Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
-            startActivity(intent);
-            finish();
+            leaveTrip();
             return;
 
         });
+    }
+
+    private void leaveTrip() {
+        fusedLocationProviderClient.removeLocationUpdates(locationCallback);
+        Utility.removeUserFromTrip(true, userId, tripId);
+        Utility.updateUserToTrip(false, userId);
+        Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
+        startActivity(intent);
+
     }
 
     private void fetchTripDetails() {
@@ -132,8 +159,14 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         }
         tripDatabaseReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId);
         FirebaseUser user = (FirebaseUser) TripContext.getValue(Constants.USER);
+        userTripDBRef = tripDatabaseReference.child(Constants.USERS);
         userId = user.getUid();
+        //Utility.removeUserFromTrip(false,userId,tripId);
         Utility.updateUserToTrip(true, userId);
+        currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
+        GeoFire geoFire = new GeoFire(userTripDBRef);
+        geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
         isBasicTripInfoCaptured = true;
     }
 
@@ -141,8 +174,8 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
 
-        DatabaseReference userDBRef = tripDatabaseReference.child(Constants.USERS);
-        GeoFire geoFire = new GeoFire(userDBRef);
+
+        GeoFire geoFire = new GeoFire(userTripDBRef);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
 
         if (myMarker != null) {
@@ -223,19 +256,21 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         if (!userId.equals(str)) {
                             int i = 0;
                             Map<String, Object> userData = (Map<String, Object>) users.get(str);
-                            List<Object> list = (List<Object>) userData.get("l");
-                            LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                            Marker userMarker = null;
-                            if (i % 2 == 0) {
-                                userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
-                                        .icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
-                            } else {
-                                userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
-                                        .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
-                            }
+                            if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
+                                List<Object> list = (List<Object>) userData.get("l");
+                                LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                                Marker userMarker = null;
+                                if (i % 2 == 0) {
+                                    userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
+                                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
+                                } else {
+                                    userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
+                                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
+                                }
 
-                            i++;
-                            userMarkers.add(userMarker);
+                                i++;
+                                userMarkers.add(userMarker);
+                            }
                         }
                     }
                 }

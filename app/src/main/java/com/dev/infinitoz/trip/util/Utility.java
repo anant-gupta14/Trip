@@ -43,6 +43,13 @@ public class Utility {
         dbRef.updateChildren(map);
     }
 
+    public static void removeUserFromTrip(boolean value, String userId, String tripId) {
+        DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripId).child(Constants.USERS).child(userId);
+        Map<String, Object> map = new HashMap<>();
+        map.put(Constants.IS_REMOVED, value);
+        dbRef.updateChildren(map);
+    }
+
     public static void updateTripIdToUser(boolean add, String userId) {
         String tripID = (String) TripContext.getValue(Constants.TRIP_ID);
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);

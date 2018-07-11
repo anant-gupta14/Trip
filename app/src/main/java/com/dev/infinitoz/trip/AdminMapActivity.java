@@ -347,11 +347,13 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                     for (String str : users.keySet()) {
                         int i = 0;
                         Map<String, Object> userData = (Map<String, Object>) users.get(str);
-                        List<Object> list = (List<Object>) userData.get("l");
-                        LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                        Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
-                                .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
-                        userMarkers.add(userMarker);
+                        if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
+                            List<Object> list = (List<Object>) userData.get("l");
+                            LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                            Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
+                                    .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
+                            userMarkers.add(userMarker);
+                        }
                     }
                 }
             }
@@ -409,9 +411,11 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             TextView textView = customView.findViewById(R.id.toolbar_title);
 
             textView.setOnClickListener(view -> {
+                if (isTripStarted) {
+                    TripContext.addValue(Constants.RELOAD_TRIP, true);
+                }
                 Intent intent = new Intent(AdminMapActivity.this, AdminManagementActivity.class);
                 startActivity(intent);
-                finish();
             });
             actionBar.setCustomView(customView);
         }
