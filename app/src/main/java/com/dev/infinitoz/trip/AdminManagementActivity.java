@@ -31,7 +31,7 @@ public class AdminManagementActivity extends AppCompatActivity {
     UserViewAdapter adapter;
     List<User> users;
     private RecyclerView recyclerView;
-    private DatabaseReference tripDBReference, userDBRef;
+    private DatabaseReference tripUserDBReference, userDBRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,9 +53,10 @@ public class AdminManagementActivity extends AppCompatActivity {
 
     private void populateUsers() {
         tripId = (String) TripContext.getValue(Constants.TRIP_ID);
-        tripDBReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId).child(Constants.USERS);
+        tripId = "7fume";
+        tripUserDBReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId).child(Constants.USERS);
 
-        tripDBReference.addValueEventListener(new ValueEventListener() {
+        tripUserDBReference.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
@@ -63,28 +64,31 @@ public class AdminManagementActivity extends AppCompatActivity {
                     Map<String, Object> usersMap = (Map<String, Object>) dataSnapshot.getValue();
                     final Integer[] count = new Integer[1];
                     count[0] = 0;
-                    for (String str : usersMap.keySet()) {
-                        FirebaseDatabase.getInstance().getReference(Constants.USERS).child(str).addListenerForSingleValueEvent(new ValueEventListener() {
-                            @Override
-                            public void onDataChange(DataSnapshot dataSnapshot) {
-                                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                                    User user = dataSnapshot.getValue(User.class);
-                                    user.setuId(str);
-                                    Log.d("User", user.toString());
-                                    users.add(user);
-                                    count[0] = new Integer(count[0].intValue() + 1);
-                                }
-                                if (count[0].equals(usersMap.size())) {
-                                    adapter = new UserViewAdapter(users);
-                                    recyclerView.setAdapter(adapter);
-                                }
-                            }
+                    for (String userID : usersMap.keySet()) {
+                        count[0] = new Integer(count[0].intValue() + 1);
+                        if (usersMap.get(Constants.IS_REMOVED) == null || !(boolean) usersMap.get(Constants.IS_REMOVED)) {
+                            FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userID).addListenerForSingleValueEvent(new ValueEventListener() {
+                                @Override
+                                public void onDataChange(DataSnapshot dataSnapshot) {
+                                    if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                                        User user = dataSnapshot.getValue(User.class);
+                                        user.setuId(userID);
+                                        Log.d("User", user.toString());
+                                        users.add(user);
 
-                            @Override
-                            public void onCancelled(DatabaseError databaseError) {
+                                    }
+                                    if (count[0].equals(usersMap.size())) {
+                                        adapter = new UserViewAdapter(users);
+                                        recyclerView.setAdapter(adapter);
+                                    }
+                                }
 
-                            }
-                        });
+                                @Override
+                                public void onCancelled(DatabaseError databaseError) {
+
+                                }
+                            });
+                        }
                     }
                 }
 
@@ -153,7 +157,7 @@ public class AdminManagementActivity extends AppCompatActivity {
 
     private void removeUserFromTrip(String userId) {
         Utility.removeUserFromTrip(true, userId, tripId);
-        Utility.updateUserToTrip(false, userId);
+        //Utility.updateUserToTrip(false, userId);
     }
 
     public void restore(User user, int position) {

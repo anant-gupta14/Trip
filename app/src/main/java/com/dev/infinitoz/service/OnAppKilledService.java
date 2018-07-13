@@ -8,7 +8,6 @@ import android.util.Log;
 
 import com.dev.infinitoz.TripContext;
 import com.dev.infinitoz.trip.Constants;
-import com.dev.infinitoz.trip.util.Utility;
 import com.google.firebase.auth.FirebaseUser;
 
 public class OnAppKilledService extends Service {
@@ -21,7 +20,7 @@ public class OnAppKilledService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         FirebaseUser user = (FirebaseUser) TripContext.getValue(Constants.USER);
-        Utility.updateUserToTrip(false, user.getUid());
+        //Utility.updateUserToTrip(false, user.getUid());
         Log.d("TESTING_SERVICE", "service is stopped");
         super.onTaskRemoved(rootIntent);
     }

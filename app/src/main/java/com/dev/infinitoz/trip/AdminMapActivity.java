@@ -31,6 +31,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.model.User;
 import com.dev.infinitoz.remote.IGoogleApi;
 import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
@@ -88,7 +89,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LatLng startPointLatLng, destLatLng, currentLocation;
-    private String startPoint, endPoint, tripID, userId;
+    private String startPoint, endPoint, tripID, userId, otp;
     private PlaceAutocompleteFragment startAutocompleteFragment, destAutocompleteFragment;
     private SupportMapFragment mapFragment;
     private View mapView;
@@ -101,7 +102,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private Marker adminMarker, startMarker, endMarker;
     private LinearLayout linearLayout;
     private TextView tripIdTextView;
-    private DatabaseReference tripDBReference;
+    private DatabaseReference tripDBReference, userDBReference;
     private List<Marker> userMarkers;
     private List<LatLng> directionLatLngs = new ArrayList<>();
 
@@ -344,15 +345,27 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                     removeExistingUsers();
                     userMarkers = new ArrayList<>();
                     Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
-                    for (String str : users.keySet()) {
-                        int i = 0;
-                        Map<String, Object> userData = (Map<String, Object>) users.get(str);
+                    for (String userId : users.keySet()) {
+                        Map<String, Object> userData = (Map<String, Object>) users.get(userId);
                         if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
                             List<Object> list = (List<Object>) userData.get("l");
                             LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                            Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
-                                    .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
-                            userMarkers.add(userMarker);
+                            User user = getUserDetailsFromMap(userId);
+                            if (user != null) {
+                                Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(user.getName()));
+                                switch (user.getVehicleType()) {
+                                    case Constants.CAR:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car));
+                                        break;
+                                    case Constants.BIKE:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike));
+                                        break;
+                                    case Constants.WALK:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_walk));
+                                        break;
+                                }
+                                userMarkers.add(userMarker);
+                            }
                         }
                     }
                 }
@@ -364,6 +377,38 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             }
         });
     }
+
+    private User getUserDetailsFromMap(String userId) {
+        Map<String, User> userMap = (Map<String, User>) TripContext.getValue(Constants.USER_DATA_MAP);
+        if (userMap == null) {
+            userMap = new HashMap<>();
+            TripContext.addValue(Constants.USER_DATA_MAP, userMap);
+        }
+
+        if (userMap.get(userId) != null) {
+            return userMap.get(userId);
+        } else {
+            userDBReference = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
+            userDBReference.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    User user = null;
+                    if (dataSnapshot.exists()) {
+                        user = dataSnapshot.getValue(User.class);
+                        user.setuId(userId);
+                        ((Map<String, User>) TripContext.getValue(Constants.USER_DATA_MAP)).put(userId, user);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+        }
+        return userMap.get(userId);
+    }
+
 
     private void removeExistingUsers() {
         if (userMarkers != null && !userMarkers.isEmpty()) {
@@ -424,12 +469,12 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             tripID = (String) TripContext.getValue(Constants.TRIP_ID);
             userId = ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid();
             isReloadTrip = true;
-            relaodTrip();
+            reloadTrip();
         }
 
     }
 
-    private void relaodTrip() {
+    private void reloadTrip() {
         tripDBReference = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripID);
         tripDBReference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
@@ -453,6 +498,9 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                         lastLocation = new Location("");
                         lastLocation.setLatitude(Double.parseDouble(list.get(0).toString()));
                         lastLocation.setLongitude(Double.parseDouble(list.get(1).toString()));
+                    }
+                    if (map.get(Constants.OTP) != null) {
+                        otp = (String) map.get(Constants.OTP);
                     }
                     createTrip();
                     TripContext.removeValue(Constants.RELOAD_TRIP);
@@ -532,7 +580,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         shareTripButton.setOnClickListener(v -> {
             Intent textIntent = new Intent();
             textIntent.setAction(Intent.ACTION_SEND);
-            textIntent.putExtra(Intent.EXTRA_TEXT, Constants.Trip_TEXT + tripID);
+            textIntent.putExtra(Intent.EXTRA_TEXT, Utility.tripShareMessage(tripID, otp));
             textIntent.setType("text/plain");
             //whatsAppIntent.setPackage("com.whatsapp");
             startActivity(Intent.createChooser(textIntent, getResources().getText(R.string.chooser_text)));
@@ -547,9 +595,10 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         isTripStarted = true;
         if (TripContext.getValue(Constants.RELOAD_TRIP) == null) {
             tripID = Utility.generateTripId(userId);
+            otp = Utility.generateOTP();
         }
         setStartAndDestLocation();
-        Utility.updateUserToTrip(true, userId);
+        //Utility.updateUserToTrip(true, userId);
         Utility.updateTripIdToUser(true, userId);
 
         startTripButton.setText(Constants.END_TRIP);
@@ -565,6 +614,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         userId = ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid();
 
         TripContext.addValue(Constants.TRIP_ID, tripID);
+        TripContext.addValue(Constants.OTP, otp);
         tripDBReference = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripID);
         GeoFire geoFire = new GeoFire(tripDBReference);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
@@ -579,6 +629,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             Map<String, Object> map = new HashMap<>();
             map.put(Constants.ADMIN, userId);
             map.put(Constants.CREATED_TIME, Utility.getCurrentTime());
+            map.put(Constants.OTP, otp);
             tripDBReference.updateChildren(map);
         }
 
@@ -608,7 +659,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         tripIdTextView.setVisibility(View.GONE);
         shareTripButton.setVisibility(View.GONE);
         removeTripId();
-        Utility.updateUserToTrip(false, userId);
+        //Utility.updateUserToTrip(false, userId);
         Utility.updateTripIdToUser(false, userId);
     }
 

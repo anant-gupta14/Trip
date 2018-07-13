@@ -147,7 +147,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private void leaveTrip() {
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         Utility.removeUserFromTrip(true, userId, tripId);
-        Utility.updateUserToTrip(false, userId);
+        //Utility.updateUserToTrip(false, userId);
         Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
         startActivity(intent);
 
@@ -162,7 +162,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         userTripDBRef = tripDatabaseReference.child(Constants.USERS);
         userId = user.getUid();
         //Utility.removeUserFromTrip(false,userId,tripId);
-        Utility.updateUserToTrip(true, userId);
+        //Utility.updateUserToTrip(true, userId);
         currentLocation = new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude());
         mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
         GeoFire geoFire = new GeoFire(userTripDBRef);
@@ -230,7 +230,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         return;
                     }
 
-                    Utility.updateUserToTrip(true, userId);
+                    // Utility.updateUserToTrip(true, userId);
                     isBasicTripInfoCaptured = true;
                 }
 

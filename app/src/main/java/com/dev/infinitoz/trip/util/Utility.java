@@ -26,6 +26,12 @@ public class Utility {
         return token.toString();
     }
 
+    public static String generateOTP() {
+
+        Random random = new Random();
+        return String.format("%04d", random.nextInt(10000));
+    }
+
     public static String getCurrentTime() {
         Calendar calendar = Calendar.getInstance();
         TimeZone timeZone = calendar.getTimeZone();
@@ -36,12 +42,12 @@ public class Utility {
 
     }*/
 
-    public static void updateUserToTrip(boolean value, String userId) {
+    /*public static void updateUserToTrip(boolean value, String userId) {
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
         Map<String, Object> map = new HashMap<>();
         map.put(Constants.ON_TRIP, value);
         dbRef.updateChildren(map);
-    }
+    }*/
 
     public static void removeUserFromTrip(boolean value, String userId, String tripId) {
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference(Constants.TRIP).child(tripId).child(Constants.USERS).child(userId);
@@ -60,6 +66,14 @@ public class Utility {
         } else {
             dbRef.child(Constants.TRIP_ID).removeValue();
         }
+    }
+
+    public static String tripShareMessage(String tripId, String otp) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(Constants.Trip_TEXT);
+        sb.append(tripId);
+        sb.append(" OTP::" + otp);
+        return sb.toString();
     }
 
 }

@@ -82,18 +82,18 @@ public class MainActivity extends AppCompatActivity {
                         progressBar.setVisibility(View.GONE);
                         return;
                     }
-                    if (userDataMap.get(Constants.ON_TRIP) != null && !(boolean) userDataMap.get(Constants.ON_TRIP)) {
+                    // if (userDataMap.get(Constants.ON_TRIP) != null && !(boolean) userDataMap.get(Constants.ON_TRIP)) {
                         checkIsAnyTripActive(userDataMap);
 
                         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                         progressBar.setVisibility(View.GONE);
                         //bus.post(intent);
                         return;
-                    }
-                    Toast.makeText(MainActivity.this, "User already in on going trip", Toast.LENGTH_SHORT).show();
+                    // }
+                   /* Toast.makeText(MainActivity.this, "User already in on going trip", Toast.LENGTH_SHORT).show();
                     getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
                     progressBar.setVisibility(View.GONE);
-                    return;
+                    return;*/
                 }
             }
 
