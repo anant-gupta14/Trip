@@ -53,7 +53,6 @@ public class AdminManagementActivity extends AppCompatActivity {
 
     private void populateUsers() {
         tripId = (String) TripContext.getValue(Constants.TRIP_ID);
-        tripId = "7fume";
         tripUserDBReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId).child(Constants.USERS);
 
         tripUserDBReference.addValueEventListener(new ValueEventListener() {
@@ -66,7 +65,8 @@ public class AdminManagementActivity extends AppCompatActivity {
                     count[0] = 0;
                     for (String userID : usersMap.keySet()) {
                         count[0] = new Integer(count[0].intValue() + 1);
-                        if (usersMap.get(Constants.IS_REMOVED) == null || !(boolean) usersMap.get(Constants.IS_REMOVED)) {
+                        Map<String, Object> userData = (Map<String, Object>) usersMap.get(userID);
+                        if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
                             FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userID).addListenerForSingleValueEvent(new ValueEventListener() {
                                 @Override
                                 public void onDataChange(DataSnapshot dataSnapshot) {

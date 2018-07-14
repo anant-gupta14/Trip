@@ -338,11 +338,11 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private void getOtherUsers() {
-        tripDBReference.child("Users").addValueEventListener(new ValueEventListener() {
+        tripDBReference.child(Constants.USERS).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
+                removeExistingUsers();
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                    removeExistingUsers();
                     userMarkers = new ArrayList<>();
                     Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
                     for (String userId : users.keySet()) {
@@ -658,6 +658,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         startTripButton.setText(Constants.START_TRIP);
         tripIdTextView.setVisibility(View.GONE);
         shareTripButton.setVisibility(View.GONE);
+        removeExistingUsers();
         removeTripId();
         //Utility.updateUserToTrip(false, userId);
         Utility.updateTripIdToUser(false, userId);

@@ -17,6 +17,7 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.model.User;
 import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
@@ -41,6 +42,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +58,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private String userId;
     private LatLng startPointLatLng, destLatLng, currentLocation, adminLatLng;
     private Marker myMarker, startMarker, endMarker, adminMarker;
-    private boolean isBasicTripInfoCaptured;
+    private boolean isBasicTripInfoCaptured, isTripClosed;
     private List<Marker> userMarkers;
     private SupportMapFragment mapFragment;
     private View mapView;
@@ -77,28 +79,31 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
         }
     };
+    private DatabaseReference userDBReference;
 
     private void checkTripAvailableForMe() {
-        userTripDBRef.child(userId).addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                    Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
-                    if (map.get(Constants.IS_REMOVED) == null || !(boolean) map.get(Constants.IS_REMOVED)) {
-                        getTripInfo();
-                        getOtherUsers();
-                    } else {
-                        leaveTrip();
-                        Toast.makeText(UserMapsActivity.this, "You are not anymore with this trip :" + tripId, Toast.LENGTH_SHORT).show();
+        if (userTripDBRef != null) {
+            userTripDBRef.child(userId).addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0 && !isTripClosed) {
+                        Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
+                        if (map.get(Constants.IS_REMOVED) == null || !(boolean) map.get(Constants.IS_REMOVED)) {
+                            getTripInfo();
+                            getOtherUsers();
+                        } else {
+                            Toast.makeText(UserMapsActivity.this, "You are not anymore with this trip :" + tripId, Toast.LENGTH_SHORT).show();
+                            leaveTrip();
+                        }
                     }
                 }
-            }
 
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
 
-            }
-        });
+                }
+            });
+        }
     }
 
     @Override
@@ -145,8 +150,11 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private void leaveTrip() {
+        isTripClosed = true;
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         Utility.removeUserFromTrip(true, userId, tripId);
+        removeExistingUsers();
+        tripDatabaseReference = userDBReference = userDBReference = null;
         //Utility.updateUserToTrip(false, userId);
         Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
         startActivity(intent);
@@ -216,6 +224,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                             Map<String, Object> adminLoc = (Map<String, Object>) map.get(adminId);
                             List<Object> list = (List<Object>) adminLoc.get("l");
                             adminLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                            getAdminDetails();
                             if (adminMarker != null) {
                                 adminMarker.remove();
                             }
@@ -223,6 +232,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         }
                     }
                     //  if (adminMarker == null && adminLatLng != null) {
+
                     adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
                     //}
 
@@ -244,6 +254,9 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
     }
 
+    private void getAdminDetails() {
+    }
+
     private void getOtherUsers() {
         tripDatabaseReference.child(Constants.USERS).addValueEventListener(new ValueEventListener() {
             @Override
@@ -252,23 +265,25 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                     removeExistingUsers();
                     userMarkers = new ArrayList<>();
                     Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
-                    for (String str : users.keySet()) {
-                        if (!userId.equals(str)) {
-                            int i = 0;
-                            Map<String, Object> userData = (Map<String, Object>) users.get(str);
+                    for (String usrID : users.keySet()) {
+                        if (!userId.equals(usrID)) {
+                            Map<String, Object> userData = (Map<String, Object>) users.get(usrID);
                             if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
                                 List<Object> list = (List<Object>) userData.get("l");
                                 LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                                Marker userMarker = null;
-                                if (i % 2 == 0) {
-                                    userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
-                                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike)));
-                                } else {
-                                    userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(Integer.toString(i))
-                                            .icon(BitmapDescriptorFactory.fromResource(R.mipmap.user)));
+                                User user = getUserDetailsFromMap(usrID);
+                                Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(user.getName()));
+                                switch (user.getVehicleType()) {
+                                    case Constants.CAR:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car));
+                                        break;
+                                    case Constants.BIKE:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike));
+                                        break;
+                                    case Constants.WALK:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_walk));
+                                        break;
                                 }
-
-                                i++;
                                 userMarkers.add(userMarker);
                             }
                         }
@@ -281,6 +296,37 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
             }
         });
+    }
+
+    private User getUserDetailsFromMap(String userId) {
+        Map<String, User> userMap = (Map<String, User>) TripContext.getValue(Constants.USER_DATA_MAP);
+        if (userMap == null) {
+            userMap = new HashMap<>();
+            TripContext.addValue(Constants.USER_DATA_MAP, userMap);
+        }
+
+        if (userMap.get(userId) != null) {
+            return userMap.get(userId);
+        } else {
+            userDBReference = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
+            userDBReference.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    User user = null;
+                    if (dataSnapshot.exists()) {
+                        user = dataSnapshot.getValue(User.class);
+                        user.setuId(userId);
+                        ((Map<String, User>) TripContext.getValue(Constants.USER_DATA_MAP)).put(userId, user);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+        }
+        return userMap.get(userId);
     }
 
     private void removeExistingUsers() {
