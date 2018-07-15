@@ -8,12 +8,14 @@ import android.os.Bundle;
 import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
@@ -118,7 +120,27 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         initialize();
         setListeners();
-        tripId = getIntent().getExtras().getString(Constants.TRIP_ID);
+        if (TripContext.getValue(Constants.RELOAD_TRIP) != null) {
+            tripId = TripContext.getValue(Constants.TRIP_ID).toString();
+        } else {
+            tripId = getIntent().getExtras().getString(Constants.TRIP_ID);
+            TripContext.addValue(Constants.TRIP_ID, tripId);
+        }
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayShowTitleEnabled(false);
+            actionBar.setDisplayShowCustomEnabled(true);
+            View customView = getLayoutInflater().inflate(R.layout.title, null);
+            TextView textView = customView.findViewById(R.id.toolbar_title);
+
+            textView.setOnClickListener(view -> {
+                TripContext.addValue(Constants.RELOAD_TRIP, true);
+                TripContext.addValue(Constants.IS_USER_VIEW, true);
+                Intent intent = new Intent(UserMapsActivity.this, AdminManagementActivity.class);
+                startActivity(intent);
+            });
+            actionBar.setCustomView(customView);
+        }
         //fetchTripDetails();
     }
 
@@ -154,8 +176,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         fusedLocationProviderClient.removeLocationUpdates(locationCallback);
         Utility.removeUserFromTrip(true, userId, tripId);
         removeExistingUsers();
-        tripDatabaseReference = userDBReference = userDBReference = null;
-        //Utility.updateUserToTrip(false, userId);
+        Utility.updateTripIdToUser(false, userId);
         Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
         startActivity(intent);
 
@@ -203,6 +224,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             public void onDataChange(DataSnapshot dataSnapshot) {
                 // Log.d("listneres", "reached inside the datasnaphot");
                 //dataSnapshot.exists();
+                String adminId = null;
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
                     Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
                     if (startPointLatLng == null) {
@@ -217,14 +239,15 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                             List<Object> list = (List<Object>) endPointMap.get("l");
                             destLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
                         }
+                        Utility.updateTripIdToUser(true, userId);
                     }
                     if (map.get(Constants.ADMIN) != null) {
-                        String adminId = (String) map.get(Constants.ADMIN);
+                        adminId = (String) map.get(Constants.ADMIN);
                         if (map.get(adminId) != null) {
                             Map<String, Object> adminLoc = (Map<String, Object>) map.get(adminId);
                             List<Object> list = (List<Object>) adminLoc.get("l");
                             adminLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                            getAdminDetails();
+
                             if (adminMarker != null) {
                                 adminMarker.remove();
                             }
@@ -232,8 +255,10 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         }
                     }
                     //  if (adminMarker == null && adminLatLng != null) {
-
-                    adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
+                    User admin = getAdminDetails(adminId);
+                    if (admin != null) {
+                        adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title(admin.getName()).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
+                    }
                     //}
 
                     if (isBasicTripInfoCaptured) {
@@ -254,7 +279,8 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
     }
 
-    private void getAdminDetails() {
+    private User getAdminDetails(String adminId) {
+        return getUserDetailsFromMap(adminId);
     }
 
     private void getOtherUsers() {
@@ -272,19 +298,21 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                                 List<Object> list = (List<Object>) userData.get("l");
                                 LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
                                 User user = getUserDetailsFromMap(usrID);
-                                Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(user.getName()));
-                                switch (user.getVehicleType()) {
-                                    case Constants.CAR:
-                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car));
-                                        break;
-                                    case Constants.BIKE:
-                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike));
-                                        break;
-                                    case Constants.WALK:
-                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_walk));
-                                        break;
+                                if (user != null) {
+                                    Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(user.getName()));
+                                    switch (user.getVehicleType()) {
+                                        case Constants.CAR:
+                                            userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car));
+                                            break;
+                                        case Constants.BIKE:
+                                            userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike));
+                                            break;
+                                        case Constants.WALK:
+                                            userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_walk));
+                                            break;
+                                    }
+                                    userMarkers.add(userMarker);
                                 }
-                                userMarkers.add(userMarker);
                             }
                         }
                     }
@@ -336,6 +364,9 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             }
         }
         userMarkers = null;
+        if (adminMarker != null) {
+            adminMarker.remove();
+        }
     }
 
 

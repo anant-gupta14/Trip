@@ -341,7 +341,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         tripDBReference.child(Constants.USERS).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
-                removeExistingUsers();
+                removeExistingUsersMarkers();
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
                     userMarkers = new ArrayList<>();
                     Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
@@ -410,7 +410,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
 
-    private void removeExistingUsers() {
+    private void removeExistingUsersMarkers() {
         if (userMarkers != null && !userMarkers.isEmpty()) {
             for (Marker marker : userMarkers) {
                 marker.remove();
@@ -594,7 +594,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         }
         isTripStarted = true;
         if (TripContext.getValue(Constants.RELOAD_TRIP) == null) {
-            tripID = Utility.generateTripId(userId);
+            tripID = FirebaseDatabase.getInstance().getReference(Constants.TRIP).push().getKey();//Utility.generateTripId(userId);
             otp = Utility.generateOTP();
         }
         setStartAndDestLocation();
@@ -658,14 +658,20 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         startTripButton.setText(Constants.START_TRIP);
         tripIdTextView.setVisibility(View.GONE);
         shareTripButton.setVisibility(View.GONE);
-        removeExistingUsers();
+        removeExistingUsersMarkers();
+        removeUsersFromTrip();
+        Map<String, Object> map = new HashMap<>();
+        map.put(Constants.END_TIME, Utility.getCurrentTime());
+        tripDBReference.updateChildren(map);
         removeTripId();
         //Utility.updateUserToTrip(false, userId);
         Utility.updateTripIdToUser(false, userId);
+        TripContext.removeValue(tripID);
     }
 
     private void removeTripId() {
         DatabaseReference historyDB = FirebaseDatabase.getInstance().getReference(Constants.HISTORY).child(tripID);
+        removeUsersFromTrip();
         tripDBReference.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
@@ -693,6 +699,26 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         });
 
 
+    }
+
+    private void removeUsersFromTrip() {
+        tripDBReference.child(Constants.USERS).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists()) {
+                    Map<String, Object> userTripMap = (Map<String, Object>) dataSnapshot.getValue();
+                    for (String userId : userTripMap.keySet()) {
+                        Utility.removeUserFromTrip(true, userId, tripID);
+                    }
+
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
     }
 
     @Override

@@ -30,4 +30,8 @@ public interface Constants {
     String IS_REMOVED = "isRemoved";
     String OTP = "OTP";
     String USER_DATA_MAP = "USER_DATA_MAP";
+    String DATE_FORMAT_TIMEZONE = "dd-MM-yyyy'T'HH:mm:ss'Z'";
+    String GMT = "GMT";
+    String END_TIME = "endTime";
+    String IS_USER_VIEW = "isUserView";
 }

@@ -5,7 +5,9 @@ import com.dev.infinitoz.trip.Constants;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
-import java.util.Calendar;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -15,7 +17,7 @@ public class Utility {
     private static final Random random = new Random();
     private static StringBuilder base = new StringBuilder("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ234567890");
     private static String CHARS;
-
+    private static DateFormat dateFormat;
     public static String generateTripId(String userId) {
         base.append(userId);
         CHARS = base.toString();
@@ -33,9 +35,9 @@ public class Utility {
     }
 
     public static String getCurrentTime() {
-        Calendar calendar = Calendar.getInstance();
-        TimeZone timeZone = calendar.getTimeZone();
-        return timeZone.toString();
+        dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT_TIMEZONE);
+        dateFormat.setTimeZone(TimeZone.getTimeZone(Constants.GMT));
+        return dateFormat.format(new Date());
     }
 
     /*public static DatabaseReference getDatabaseReference(){
@@ -54,17 +56,24 @@ public class Utility {
         Map<String, Object> map = new HashMap<>();
         map.put(Constants.IS_REMOVED, value);
         dbRef.updateChildren(map);
+        DatabaseReference userHistory = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId).child(Constants.HISTORY);
+        Map<String, Object> userHist = new HashMap<>();
+        userHist.put(tripId, true);
+        userHistory.updateChildren(userHist);
     }
 
     public static void updateTripIdToUser(boolean add, String userId) {
         String tripID = (String) TripContext.getValue(Constants.TRIP_ID);
         DatabaseReference dbRef = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
+        Map<String, Object> map = new HashMap<>();
         if (add) {
-            Map<String, Object> map = new HashMap<>();
             map.put(Constants.TRIP_ID, tripID);
             dbRef.updateChildren(map);
         } else {
             dbRef.child(Constants.TRIP_ID).removeValue();
+            DatabaseReference historyRef = dbRef.child(Constants.HISTORY);
+            map.put(tripID, true);
+            historyRef.updateChildren(map);
         }
     }
 

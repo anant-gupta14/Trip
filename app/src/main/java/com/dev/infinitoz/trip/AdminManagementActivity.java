@@ -29,9 +29,10 @@ public class AdminManagementActivity extends AppCompatActivity {
     String tripId;
     //FirebaseRecyclerAdapter<User, UserViewHolder> adapter;
     UserViewAdapter adapter;
-    List<User> users;
+    List<User> users = new ArrayList<>();
     private RecyclerView recyclerView;
     private DatabaseReference tripUserDBReference, userDBRef;
+    private boolean isUserView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,15 +41,10 @@ public class AdminManagementActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.userList);
         recyclerView.setHasFixedSize(true);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        if (TripContext.getValue(Constants.IS_USER_VIEW) != null) {
+            isUserView = true;
+        }
         populateUsers();
-       /* User user = new User();
-        user.setName("Anant");
-        users = new ArrayList<>();
-        users.add(user);*/
-        // adapter = new UserViewAdapter(users);
-        //recyclerView.setAdapter(adapter);
-
-
     }
 
     private void populateUsers() {
@@ -59,7 +55,6 @@ public class AdminManagementActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                    users = new ArrayList<>();
                     Map<String, Object> usersMap = (Map<String, Object>) dataSnapshot.getValue();
                     final Integer[] count = new Integer[1];
                     count[0] = 0;
@@ -78,8 +73,13 @@ public class AdminManagementActivity extends AppCompatActivity {
 
                                     }
                                     if (count[0].equals(usersMap.size())) {
-                                        adapter = new UserViewAdapter(users);
-                                        recyclerView.setAdapter(adapter);
+                                        if (isUserView) {
+                                            adapter = new UserViewOnlyAdapter(users);
+                                            recyclerView.setAdapter(adapter);
+                                        } else {
+                                            adapter = new UserViewAdapter(users);
+                                            recyclerView.setAdapter(adapter);
+                                        }
                                     }
                                 }
 
@@ -168,6 +168,8 @@ public class AdminManagementActivity extends AppCompatActivity {
     public class UserViewAdapter extends RecyclerView.Adapter<UserViewHolder> {
         List<User> users;
 
+        public UserViewAdapter() {
+        }
 
         public UserViewAdapter(List<User> users) {
             this.users = users;
@@ -205,6 +207,48 @@ public class AdminManagementActivity extends AppCompatActivity {
             super(itemView);
             userName = itemView.findViewById(R.id.userName);
             deleteBtn = itemView.findViewById(R.id.delete_button);
+        }
+    }
+
+    public class UserViewOnlyAdapter extends UserViewAdapter {
+        List<User> users;
+
+
+        public UserViewOnlyAdapter(List<User> users) {
+            this.users = users;
+        }
+
+        @NonNull
+        @Override
+        public UserViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.field, parent, false);
+
+            return new UserViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull UserViewHolder holder, int position) {
+            holder.userName.setText(users.get(position).getName());
+        }
+
+        @Override
+        public int getItemCount() {
+            return users.size();
+        }
+
+
+    }
+
+    public class UserViewOnlyHolder extends RecyclerView.ViewHolder {
+        TextView userName;
+        Button deleteBtn;
+
+        public UserViewOnlyHolder(View itemView) {
+            super(itemView);
+            userName = itemView.findViewById(R.id.userName);
+            deleteBtn = itemView.findViewById(R.id.delete_button);
+            deleteBtn.setVisibility(View.GONE);
         }
     }
 }
