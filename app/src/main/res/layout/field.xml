@@ -8,8 +8,13 @@
         android:id="@+id/userName"
         android:layout_width="0dp"
         android:layout_height="match_parent"
-        android:layout_weight="5"
-        android:inputType="phone" />
+        android:layout_weight="5" />
+
+    <TextView
+        android:id="@+id/userPhone"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="5" />
 
     <Button
         android:id="@+id/delete_button"
