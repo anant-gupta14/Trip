@@ -102,6 +102,11 @@ public class MenuActivity extends AppCompatActivity {
                         MenuActivity.super.onBackPressed();
                         finish();
                         break;
+                    case R.id.history:
+                        intent = new Intent(MenuActivity.this, HistoryActivity.class);
+                        intent.putExtra(Constants.USER_ID, ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid());
+                        startActivity(intent);
+                        break;
                     case R.id.contactUs:
                         break;
                     case R.id.privacyPolicy:

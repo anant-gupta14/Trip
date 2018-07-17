@@ -5,6 +5,10 @@
         android:title="Profile" />
 
     <item
+        android:id="@+id/history"
+        android:title="Last trips" />
+
+    <item
         android:id="@+id/contactUs"
         android:title="Contact us" />
     <item

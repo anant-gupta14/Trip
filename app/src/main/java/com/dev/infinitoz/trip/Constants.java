@@ -34,4 +34,7 @@ public interface Constants {
     String GMT = "GMT";
     String END_TIME = "endTime";
     String IS_USER_VIEW = "isUserView";
+    String START_POINT = "startPoint";
+    String END_POINT = "endPoint";
+    String USER_ID = "userID";
 }

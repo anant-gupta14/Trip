@@ -630,6 +630,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             map.put(Constants.ADMIN, userId);
             map.put(Constants.CREATED_TIME, Utility.getCurrentTime());
             map.put(Constants.OTP, otp);
+            map.put(Constants.START_POINT, startPoint);
+            map.put(Constants.END_POINT, endPoint);
             tripDBReference.updateChildren(map);
         }
 

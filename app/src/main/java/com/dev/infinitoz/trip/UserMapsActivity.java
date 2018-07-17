@@ -280,6 +280,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private User getAdminDetails(String adminId) {
+        TripContext.addValue(Constants.ADMIN, adminId);
         return getUserDetailsFromMap(adminId);
     }
 

@@ -2,7 +2,9 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:layout_margin="2sp"
+    android:orientation="horizontal"
+    android:padding="10sp">
 
     <TextView
         android:id="@+id/userName"
@@ -19,7 +21,7 @@
     <Button
         android:id="@+id/delete_button"
         android:layout_width="0dp"
-        android:layout_height="40dp"
+        android:layout_height="30dp"
         android:layout_weight="1"
         android:background="@android:drawable/ic_delete"
         android:onClick="onRemove" />

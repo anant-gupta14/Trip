@@ -7,6 +7,7 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +19,20 @@ public class Utility {
     private static StringBuilder base = new StringBuilder("abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNOPQRSTUVWXYZ234567890");
     private static String CHARS;
     private static DateFormat dateFormat;
+    private static String timeZone;
+
+    static {
+        Calendar cal = Calendar.getInstance();
+        long milliDiff = cal.get(Calendar.ZONE_OFFSET);
+        String[] ids = TimeZone.getAvailableIDs();
+        for (String id : ids) {
+            TimeZone tz = TimeZone.getTimeZone(id);
+            if (tz.getRawOffset() == milliDiff) {
+                timeZone = id;
+                break;
+            }
+        }
+    }
     public static String generateTripId(String userId) {
         base.append(userId);
         CHARS = base.toString();
@@ -85,4 +100,12 @@ public class Utility {
         return sb.toString();
     }
 
+    /*public static String getTimeStampByLocale(String timeStamp) {
+
+        dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT_TIMEZONE);
+        dateFormat.setTimeZone(TimeZone.getTimeZone(Constants.GMT));
+
+
+
+    }*/
 }

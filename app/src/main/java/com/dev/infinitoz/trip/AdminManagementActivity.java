@@ -46,6 +46,7 @@ public class AdminManagementActivity extends AppCompatActivity {
             isUserView = true;
         }
         populateUsers();
+        populateAdmin();
     }
 
     private void populateUsers() {
@@ -109,6 +110,19 @@ public class AdminManagementActivity extends AppCompatActivity {
         });
 
     }
+
+    private void populateAdmin() {
+        String adminId = (String) TripContext.getValue(Constants.ADMIN);
+        if (adminId != null) {
+            User user = checkUserInMap(adminId);
+            if (user != null) {
+                users.add(user);
+                adapter.notifyDataSetChanged();
+            }
+        }
+
+    }
+
 
     private User checkUserInMap(String userID) {
         Map<String, User> userMap = (Map<String, User>) TripContext.getValue(Constants.USER_DATA_MAP);
