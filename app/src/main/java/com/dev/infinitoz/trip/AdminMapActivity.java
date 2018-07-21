@@ -2,16 +2,20 @@ package com.dev.infinitoz.trip;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Location;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.design.widget.BottomSheetBehavior;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
@@ -33,6 +37,7 @@ import android.widget.Toast;
 import com.dev.infinitoz.TripContext;
 import com.dev.infinitoz.model.User;
 import com.dev.infinitoz.remote.IGoogleApi;
+import com.dev.infinitoz.trip.util.Messages;
 import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
@@ -78,6 +83,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -88,26 +94,30 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     LocationRequest locationRequest;
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
-    private LatLng startPointLatLng, destLatLng, currentLocation;
+    BottomSheetBehavior bottomSheetBehavior;
     private String startPoint, endPoint, tripID, userId, otp;
-    private PlaceAutocompleteFragment startAutocompleteFragment, destAutocompleteFragment;
+    boolean isClicked;
     private SupportMapFragment mapFragment;
     private View mapView;
-
-    private Button logout, startTripButton, shareTripButton;
-    private boolean isTripStarted, isReloadTrip;
+    private LatLng startPointLatLng, destLatLng, currentLocation, meetPointLatLng;
+    private PlaceAutocompleteFragment startAutocompleteFragment, destAutocompleteFragment, meetPointFragment;
 
     private Location lastLocation;
-
-    private Marker adminMarker, startMarker, endMarker;
-    private LinearLayout linearLayout;
+    private Button logout, startTripButton, shareTripButton, slideButton, meetPointButton, addMeetingBT, sosBT;
+    private boolean isTripStarted, isReloadTrip, isMeetBTCLicked, isSOSClicked;
     private TextView tripIdTextView;
     private DatabaseReference tripDBReference, userDBReference;
     private List<Marker> userMarkers;
     private List<LatLng> directionLatLngs = new ArrayList<>();
+    private Marker adminMarker, startMarker, endMarker, meetPointMarker;
 
     private ImageView appImageView;
     private AdView adView;
+    private LinearLayout cardLinearLayout, meetLinearLayout;
+    private Set<String> prevSOSUsers;
+    private MediaPlayer mp;
+    private AlertDialog.Builder sosDialog;
+    private boolean isSOSDIalogEnabled;
     LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
@@ -132,6 +142,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                         // adminMarker = mMap.addMarker(new MarkerOptions().position(currentLocation).title.xml(Constants.ADMIN).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
                         // animateCar();
                         getOtherUsers();
+                        getSOSDetails();
                         //setAnimation(mMap,directionLatLngs);
                     }
                 }
@@ -139,6 +150,64 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
         }
     };
+
+    private void getSOSDetails() {
+        tripDBReference.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                    Map<String, Object> map = (Map<String, Object>) dataSnapshot.getValue();
+
+                    if (map.get(Constants.SOS) != null) {
+                        Map<String, Object> sosUserMap = (Map<String, Object>) map.get(Constants.SOS);
+                        Set<String> users = sosUserMap.keySet();
+                        if (compareSOSUsers(users)) {
+                            prevSOSUsers = users;
+                            creatAlertDialog(getSOSMessage(users));
+                        }
+
+                    } else {
+                        if (isSOSDIalogEnabled) {
+                            prevSOSUsers = null;
+                            if (mp != null) {
+                                mp.stop();
+                                sosDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                    @Override
+                                    public void onDismiss(DialogInterface dialog) {
+                                        dialog.dismiss();
+                                    }
+                                });
+                            }
+                            isSOSDIalogEnabled = false;
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    private boolean compareSOSUsers(Set<String> users) {
+        if (prevSOSUsers == null) {
+            return true;
+        }
+        if (prevSOSUsers.size() < users.size()) {
+            return true;
+        } else {
+            for (String userid : prevSOSUsers) {
+                if (!users.contains(userid)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+
     private List<LatLng> polylineList;
     private float v;
     private double lat, lng;
@@ -337,45 +406,27 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         return poly;
     }
 
-    private void getOtherUsers() {
-        tripDBReference.child(Constants.USERS).addValueEventListener(new ValueEventListener() {
+    private void creatAlertDialog(String msg) {
+        isSOSDIalogEnabled = true;
+        if (mp == null) {
+            mp = MediaPlayer.create(AdminMapActivity.this, Settings.System.DEFAULT_RINGTONE_URI);
+        }
+        if (sosDialog == null) {
+            sosDialog = new AlertDialog.Builder(AdminMapActivity.this);
+            sosDialog.setCancelable(true);
+            sosDialog.setTitle(Messages.SOS_TITLE);
+        }
+        sosDialog.setMessage(msg);
+        mp.start();
+        sosDialog.setPositiveButton(Constants.OK, new DialogInterface.OnClickListener() {
             @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                removeExistingUsersMarkers();
-                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                    userMarkers = new ArrayList<>();
-                    Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
-                    for (String userId : users.keySet()) {
-                        Map<String, Object> userData = (Map<String, Object>) users.get(userId);
-                        if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
-                            List<Object> list = (List<Object>) userData.get("l");
-                            LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
-                            User user = getUserDetailsFromMap(userId);
-                            if (user != null) {
-                                Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(user.getName()));
-                                switch (user.getVehicleType()) {
-                                    case Constants.CAR:
-                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car));
-                                        break;
-                                    case Constants.BIKE:
-                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike));
-                                        break;
-                                    case Constants.WALK:
-                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_walk));
-                                        break;
-                                }
-                                userMarkers.add(userMarker);
-                            }
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
+            public void onClick(DialogInterface dialog, int which) {
+                mp.stop();
             }
         });
+        sosDialog.show();
+
+
     }
 
     private User getUserDetailsFromMap(String userId) {
@@ -419,59 +470,19 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         userMarkers = null;
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_admin_map);
-        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        mapFragment = (SupportMapFragment) getSupportFragmentManager()
-                .findFragmentById(R.id.map);
-        mapFragment.getMapAsync(this);
-
-        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-
-
-        MobileAds.initialize(this, "ca-app-pub-3940256099942544~3347511713");
-        adView = findViewById(R.id.adView);
-        AdRequest adRequest = new AdRequest.Builder().addTestDevice("8D8CED2F4594A1FD38529F7D241C99BF").build();
-        adView.loadAd(adRequest);
-        initialize();
-        /*Toolbar toolbar = findViewById(R.id.toolbarAdmin);
-        TextView tv = findViewById(R.id.toolbar_title);
-        setSupportActionBar(toolbar);
-        tv.setOnClickListener(view -> {
-            Log.d("action bar clicked","true");
-        });
-
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        getSupportActionBar().setHomeButtonEnabled(true);
-*/
-
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayShowTitleEnabled(false);
-            actionBar.setDisplayShowCustomEnabled(true);
-            View customView = getLayoutInflater().inflate(R.layout.title, null);
-            TextView textView = customView.findViewById(R.id.toolbar_title);
-
-            textView.setOnClickListener(view -> {
-                if (isTripStarted) {
-                    TripContext.addValue(Constants.RELOAD_TRIP, true);
+    private String getSOSMessage(Set<String> users) {
+        StringBuilder builder = new StringBuilder(Messages.SOS_MSG);
+        builder.append("\n");
+        for (String userid : users) {
+            if (userid != userId) {
+                User user = getUserDetailsFromMap(userid);
+                if (user != null) {
+                    builder.append(user.getName() + ":::" + user.getPhone());
+                    builder.append("\n");
                 }
-                Intent intent = new Intent(AdminMapActivity.this, AdminManagementActivity.class);
-                startActivity(intent);
-            });
-            actionBar.setCustomView(customView);
+            }
         }
-        setListeners();
-        if (TripContext.getValue(Constants.RELOAD_TRIP) != null) {
-            tripID = (String) TripContext.getValue(Constants.TRIP_ID);
-            userId = ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid();
-            isReloadTrip = true;
-            reloadTrip();
-        }
-
+        return builder.toString();
     }
 
     private void reloadTrip() {
@@ -515,6 +526,104 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
     }
 
+    private void getOtherUsers() {
+        tripDBReference.child(Constants.USERS).addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                removeExistingUsersMarkers();
+                if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
+                    userMarkers = new ArrayList<>();
+                    Map<String, Object> users = (Map<String, Object>) dataSnapshot.getValue();
+                    for (String userId : users.keySet()) {
+                        Map<String, Object> userData = (Map<String, Object>) users.get(userId);
+                        if (userData.get(Constants.IS_REMOVED) == null || !(boolean) userData.get(Constants.IS_REMOVED)) {
+                            List<Object> list = (List<Object>) userData.get("l");
+                            LatLng userLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+                            User user = getUserDetailsFromMap(userId);
+                            if (user != null) {
+                                Marker userMarker = mMap.addMarker(new MarkerOptions().position(userLatLng).title(user.getName()));
+                                switch (user.getVehicleType()) {
+                                    case Constants.CAR:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_car_front));
+                                        break;
+                                    case Constants.BIKE:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_bike_front));
+                                        break;
+                                    case Constants.WALK:
+                                        userMarker.setIcon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_walk_new));
+                                        break;
+                                }
+                                userMarkers.add(userMarker);
+                            }
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_admin_map);
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+
+
+        MobileAds.initialize(this, "ca-app-pub-3940256099942544~3347511713");
+        adView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().addTestDevice("8D8CED2F4594A1FD38529F7D241C99BF").build();
+        adView.loadAd(adRequest);
+        initialize();
+
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayShowTitleEnabled(false);
+            actionBar.setDisplayShowCustomEnabled(true);
+            View customView = getLayoutInflater().inflate(R.layout.title, null);
+            TextView textView = customView.findViewById(R.id.toolbar_title);
+
+            textView.setOnClickListener(view -> {
+                if (isTripStarted) {
+                    TripContext.addValue(Constants.RELOAD_TRIP, true);
+                }
+                Intent intent = new Intent(AdminMapActivity.this, AdminManagementActivity.class);
+                startActivity(intent);
+            });
+
+            slideButton = customView.findViewById(R.id.testBT);
+            View bottomSheet = findViewById(R.id.bottom_sheet);
+            bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+            bottomSheetBehavior.setPeekHeight(0);
+            slideButton.setOnClickListener(v -> {
+                int state = bottomSheetBehavior.getState();
+                if (BottomSheetBehavior.STATE_COLLAPSED == state) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                } else if (BottomSheetBehavior.STATE_EXPANDED == state) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
+            });
+            actionBar.setCustomView(customView);
+        }
+        setListeners();
+        if (TripContext.getValue(Constants.RELOAD_TRIP) != null) {
+            tripID = (String) TripContext.getValue(Constants.TRIP_ID);
+            userId = ((FirebaseUser) TripContext.getValue(Constants.USER)).getUid();
+            isReloadTrip = true;
+            reloadTrip();
+        }
+
+    }
 
     private void initialize() {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
@@ -530,8 +639,13 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
-        linearLayout = findViewById(R.id.cards);
+        cardLinearLayout = findViewById(R.id.cards);
         tripIdTextView = findViewById(R.id.tripId);
+        meetLinearLayout = findViewById(R.id.meetCard);
+        meetPointFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.meetPointAutoComp);
+        meetPointButton = findViewById(R.id.meetButton);
+        addMeetingBT = findViewById(R.id.addMeetingBT);
+        sosBT = findViewById(R.id.sos);
         polylineList = new ArrayList<>();
         //mService = Common.getGoogleApi();
 
@@ -565,6 +679,44 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
             }
         });
+
+        meetPointFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                meetPointLatLng = place.getLatLng();
+
+            }
+
+            @Override
+            public void onError(Status status) {
+
+            }
+        });
+        meetPointButton.setOnClickListener(v -> {
+            if (!isMeetBTCLicked) {
+                meetLinearLayout.setVisibility(View.VISIBLE);
+                isMeetBTCLicked = true;
+                addMeetingBT.setVisibility(View.VISIBLE);
+            } else {
+                meetLinearLayout.setVisibility(View.GONE);
+                addMeetingBT.setVisibility(View.GONE);
+                isMeetBTCLicked = false;
+            }
+        });
+
+        addMeetingBT.setOnClickListener(v -> {
+            if (meetPointMarker != null) {
+                addMeetingBT.setText(Constants.ADD_MEETING_POINT);
+                tripDBReference.child(Constants.MEET_POINT).removeValue();
+                meetPointMarker.remove();
+            } else {
+                addMeetingBT.setText(Constants.REMOVE_MEET_POINT);
+                GeoFire geoFire = new GeoFire(tripDBReference);
+                geoFire.setLocation(Constants.MEET_POINT, new GeoLocation(meetPointLatLng.latitude, meetPointLatLng.longitude));
+                meetPointMarker = mMap.addMarker(new MarkerOptions().position(meetPointLatLng).title(Constants.MEET_POINT.toUpperCase()).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_meetpoint)));
+                meetLinearLayout.setVisibility(View.GONE);
+            }
+        });
         /*logout.setOnClickListener((v) -> {
             FirebaseAuth.getInstance().signOut();
             Intent intent = new Intent(AdminMapActivity.this, MainActivity.class);
@@ -585,6 +737,22 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             //whatsAppIntent.setPackage("com.whatsapp");
             startActivity(Intent.createChooser(textIntent, getResources().getText(R.string.chooser_text)));
         });
+
+        sosBT.setOnClickListener(v -> {
+            DatabaseReference sosDBRef = tripDBReference.child(Constants.SOS).child(userId);
+            if (!isSOSClicked) {
+                sosDBRef.setValue(true);
+                isSOSClicked = true;
+                sosBT.setText(Messages.STOP_SOS);
+            } else {
+                sosDBRef.removeValue();
+                sosBT.setText(Constants.SOS);
+                isSOSClicked = false;
+
+            }
+
+
+        });
     }
 
     private void createTrip() {
@@ -602,11 +770,12 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         Utility.updateTripIdToUser(true, userId);
 
         startTripButton.setText(Constants.END_TRIP);
-        linearLayout.setVisibility(View.GONE);
+        cardLinearLayout.setVisibility(View.GONE);
         tripIdTextView.setBackgroundColor(R.color.colorAccent);
         tripIdTextView.setText(tripID);
         tripIdTextView.setVisibility(View.VISIBLE);
         shareTripButton.setVisibility(View.VISIBLE);
+        sosBT.setVisibility(View.VISIBLE);
 
     }
 
@@ -619,10 +788,10 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         GeoFire geoFire = new GeoFire(tripDBReference);
         geoFire.setLocation(userId, new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()));
 
-        GeoFire geoFireStart = new GeoFire(tripDBReference);
+        //GeoFire geoFireStart = new GeoFire(tripDBReference);
         geoFire.setLocation(Constants.START, new GeoLocation(startPointLatLng.latitude, startPointLatLng.longitude));
 
-        GeoFire geoFireEnd = new GeoFire(tripDBReference);
+        //GeoFire geoFireEnd = new GeoFire(tripDBReference);
         geoFire.setLocation(Constants.END, new GeoLocation(destLatLng.latitude, destLatLng.longitude));
 
         if (!isReloadTrip) {
@@ -656,10 +825,13 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         if (adminMarker != null) {
             adminMarker.remove();
         }
-        linearLayout.setVisibility(View.VISIBLE);
+        cardLinearLayout.setVisibility(View.VISIBLE);
         startTripButton.setText(Constants.START_TRIP);
         tripIdTextView.setVisibility(View.GONE);
         shareTripButton.setVisibility(View.GONE);
+        meetLinearLayout.setVisibility(View.GONE);
+        addMeetingBT.setVisibility(View.GONE);
+        sosBT.setVisibility(View.GONE);
         removeExistingUsersMarkers();
         removeUsersFromTrip();
         Map<String, Object> map = new HashMap<>();

@@ -51,6 +51,9 @@ public class AdminManagementActivity extends AppCompatActivity {
 
     private void populateUsers() {
         tripId = (String) TripContext.getValue(Constants.TRIP_ID);
+        if (tripId == null) {
+            return;
+        }
         tripUserDBReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId).child(Constants.USERS);
 
         tripUserDBReference.addValueEventListener(new ValueEventListener() {

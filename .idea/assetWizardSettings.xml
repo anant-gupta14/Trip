@@ -19,8 +19,8 @@
                                   <option name="values">
                                     <map>
                                       <entry key="assetType" value="IMAGE" />
-                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Walking-480px/icons8-walking-480.png" />
-                                      <entry key="outputName" value="ic_walk" />
+                                      <entry key="imageAsset" value="$USER_HOME$/Downloads/Walking-512px/icons8-walking-512.png" />
+                                      <entry key="outputName" value="ic_walk_new" />
                                     </map>
                                   </option>
                                 </PersistentState>

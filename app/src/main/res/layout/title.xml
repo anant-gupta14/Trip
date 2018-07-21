@@ -11,5 +11,13 @@
         android:id="@+id/toolbar_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Click for more" />
+        android:text="See Others" />
+
+    <Button
+        android:id="@+id/testBT"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:text="..."
+        android:visibility="visible" />
 </LinearLayout>

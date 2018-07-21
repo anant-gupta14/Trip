@@ -37,4 +37,9 @@ public interface Constants {
     String START_POINT = "startPoint";
     String END_POINT = "endPoint";
     String USER_ID = "userID";
+    String MEET_POINT = "meetPoint";
+    String REMOVE_MEET_POINT = "remove meeting point";
+    String ADD_MEETING_POINT = "add meeting point";
+    String SOS = "SOS";
+    String OK = "OK";
 }

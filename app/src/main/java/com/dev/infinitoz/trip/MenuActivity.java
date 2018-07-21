@@ -141,4 +141,9 @@ public class MenuActivity extends AppCompatActivity {
 
     private void validateTripID() {
     }
+
+    @Override
+    public void onBackPressed() {
+
+    }
 }

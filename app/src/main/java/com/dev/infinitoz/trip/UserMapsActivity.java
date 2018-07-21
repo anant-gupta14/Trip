@@ -1,11 +1,14 @@
 package com.dev.infinitoz.trip;
 
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
+import android.media.MediaPlayer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
+import android.provider.Settings;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
@@ -20,6 +23,7 @@ import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
 import com.dev.infinitoz.model.User;
+import com.dev.infinitoz.trip.util.Messages;
 import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
@@ -47,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCallback {
 
@@ -58,12 +63,14 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private String tripId;
     private DatabaseReference tripDatabaseReference, userTripDBRef;
     private String userId;
-    private LatLng startPointLatLng, destLatLng, currentLocation, adminLatLng;
-    private Marker myMarker, startMarker, endMarker, adminMarker;
+    private LatLng startPointLatLng, destLatLng, currentLocation, adminLatLng, meetPointLatLng;
+    private Marker myMarker, startMarker, endMarker, adminMarker, meetMarker;
     private boolean isBasicTripInfoCaptured, isTripClosed;
     private List<Marker> userMarkers;
     private SupportMapFragment mapFragment;
     private View mapView;
+    private AlertDialog.Builder sosDialog;
+    private Set<String> prevSOSUsers;
 
     private ValueEventListener tripValueEventListener;
     LocationCallback locationCallback = new LocationCallback() {
@@ -82,6 +89,8 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         }
     };
     private DatabaseReference userDBReference;
+    private boolean isSOSDIalogEnabled;
+    private MediaPlayer mp;
 
     private void checkTripAvailableForMe() {
         if (userTripDBRef != null) {
@@ -216,6 +225,9 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             startMarker = mMap.addMarker(new MarkerOptions().position(startPointLatLng).title(Constants.START).icon(BitmapDescriptorFactory.fromResource(R.mipmap.start)));
             endMarker = mMap.addMarker(new MarkerOptions().position(destLatLng).title(Constants.END).icon(BitmapDescriptorFactory.fromResource(R.mipmap.end)));
         }
+        if (meetPointLatLng != null && meetMarker == null) {
+            meetMarker = mMap.addMarker(new MarkerOptions().position(meetPointLatLng).title(Constants.MEET_POINT.toUpperCase()).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_meetpoint)));
+        }
         tripDatabaseReference = FirebaseDatabase.getInstance().getReference().child(Constants.TRIP).child(tripId);
         FirebaseUser user = (FirebaseUser) TripContext.getValue(Constants.USER);
         userId = user.getUid();
@@ -241,6 +253,17 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         }
                         Utility.updateTripIdToUser(true, userId);
                     }
+                    if (map.get(Constants.MEET_POINT) != null) {
+                        Map<String, Object> startPointMap = (Map<String, Object>) map.get(Constants.MEET_POINT);
+                        List<Object> list = (List<Object>) startPointMap.get("l");
+                        meetPointLatLng = new LatLng(Double.parseDouble(list.get(0).toString()), Double.parseDouble(list.get(1).toString()));
+
+                    } else {
+                        if (meetMarker != null) {
+                            meetMarker.remove();
+                        }
+                        meetPointLatLng = null;
+                    }
                     if (map.get(Constants.ADMIN) != null) {
                         adminId = (String) map.get(Constants.ADMIN);
                         if (map.get(adminId) != null) {
@@ -260,6 +283,29 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                         adminMarker = mMap.addMarker(new MarkerOptions().position(adminLatLng).title(admin.getName()).icon(BitmapDescriptorFactory.fromResource(R.mipmap.ic_admin)));
                     }
                     //}
+                    if (map.get(Constants.SOS) != null) {
+                        Map<String, Object> sosUserMap = (Map<String, Object>) map.get(Constants.SOS);
+                        Set<String> users = sosUserMap.keySet();
+                        if (compareSOSUsers(users)) {
+                            prevSOSUsers = users;
+                            creatAlertDialog(getSOSMessage(users));
+                        }
+
+                    } else {
+                        if (isSOSDIalogEnabled) {
+                            prevSOSUsers = null;
+                            if (mp != null) {
+                                mp.stop();
+                                sosDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                    @Override
+                                    public void onDismiss(DialogInterface dialog) {
+                                        dialog.dismiss();
+                                    }
+                                });
+                            }
+                            isSOSDIalogEnabled = false;
+                        }
+                    }
 
                     if (isBasicTripInfoCaptured) {
                         return;
@@ -277,6 +323,60 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             }
         });
 
+    }
+
+    private boolean compareSOSUsers(Set<String> users) {
+        if (prevSOSUsers == null) {
+            return true;
+        }
+        if (prevSOSUsers.size() < users.size()) {
+            return true;
+        } else {
+            for (String userid : prevSOSUsers) {
+                if (!users.contains(userid)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private void creatAlertDialog(String msg) {
+        isSOSDIalogEnabled = true;
+        if (mp == null) {
+            mp = MediaPlayer.create(UserMapsActivity.this, Settings.System.DEFAULT_RINGTONE_URI);
+        }
+        if (sosDialog == null) {
+            sosDialog = new AlertDialog.Builder(UserMapsActivity.this);
+            sosDialog.setCancelable(true);
+            sosDialog.setTitle(Messages.SOS_TITLE);
+        }
+        sosDialog.setMessage(msg);
+        mp.start();
+        sosDialog.setPositiveButton(Constants.OK, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                mp.stop();
+            }
+        });
+        sosDialog.show();
+
+
+    }
+
+    private String getSOSMessage(Set<String> users) {
+        StringBuilder builder = new StringBuilder(Messages.SOS_MSG);
+        builder.append("\n");
+        for (String userid : users) {
+            if (userid != userId) {
+                User user = getUserDetailsFromMap(userid);
+                if (user != null) {
+                    builder.append(user.getName() + ":::" + user.getPhone());
+                    builder.append("\n");
+                }
+            }
+        }
+        return builder.toString();
     }
 
     private User getAdminDetails(String adminId) {
