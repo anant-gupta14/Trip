@@ -47,6 +47,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -186,6 +187,10 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         Utility.removeUserFromTrip(true, userId, tripId);
         removeExistingUsers();
         Utility.updateTripIdToUser(false, userId);
+        if (mp != null) {
+            mp.release();
+            mp = null;
+        }
         Intent intent = new Intent(UserMapsActivity.this, MenuActivity.class);
         startActivity(intent);
 
@@ -294,15 +299,16 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                     } else {
                         if (isSOSDIalogEnabled) {
                             prevSOSUsers = null;
-                            if (mp != null) {
-                                mp.stop();
+                            /*if (mp != null) {
+                                mp.release();
+                                mp = null;
                                 sosDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                                     @Override
                                     public void onDismiss(DialogInterface dialog) {
                                         dialog.dismiss();
                                     }
                                 });
-                            }
+                            }*/
                             isSOSDIalogEnabled = false;
                         }
                     }
@@ -352,13 +358,20 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             sosDialog.setTitle(Messages.SOS_TITLE);
         }
         sosDialog.setMessage(msg);
-        mp.start();
         sosDialog.setPositiveButton(Constants.OK, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 mp.stop();
+                try {
+                    mp.prepare();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
+
+//        mp.seekTo(0);
+        mp.start();
         sosDialog.show();
 
 
@@ -438,7 +451,7 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             return userMap.get(userId);
         } else {
             userDBReference = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
-            userDBReference.addValueEventListener(new ValueEventListener() {
+            userDBReference.addListenerForSingleValueEvent(new ValueEventListener() {
                 @Override
                 public void onDataChange(DataSnapshot dataSnapshot) {
                     User user = null;
@@ -454,6 +467,11 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
                 }
             });
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         return userMap.get(userId);
     }

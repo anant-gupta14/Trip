@@ -5,6 +5,10 @@
         android:title="Profile" />
 
     <item
+        android:id="@+id/earnCoins"
+        android:title="Earn Coins" />
+
+    <item
         android:id="@+id/history"
         android:title="Last trips" />
 

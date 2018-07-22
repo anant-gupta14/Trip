@@ -60,7 +60,9 @@ public class AdminManagementActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                    users = new ArrayList<>();
+                    if (users == null) {
+                        users = new ArrayList<>();
+                    }
                     Map<String, Object> usersMap = (Map<String, Object>) dataSnapshot.getValue();
                     final Integer[] count = new Integer[1];
                     count[0] = 0;
@@ -119,6 +121,9 @@ public class AdminManagementActivity extends AppCompatActivity {
         if (adminId != null) {
             User user = checkUserInMap(adminId);
             if (user != null) {
+                if (users == null) {
+                    users = new ArrayList<>();
+                }
                 users.add(user);
                 adapter.notifyDataSetChanged();
             }

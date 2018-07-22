@@ -54,7 +54,8 @@
         <activity android:name="com.dev.infinitoz.ChangePasswordActivity" />
         <activity android:name=".VerifyEmailActivity" />
         <activity android:name=".AdminManagementActivity" />
-        <activity android:name=".HistoryActivity"></activity>
+        <activity android:name=".HistoryActivity" />
+        <activity android:name=".EarnCoinsActivity"></activity>
     </application>
 
 </manifest>

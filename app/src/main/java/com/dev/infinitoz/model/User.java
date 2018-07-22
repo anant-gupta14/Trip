@@ -7,6 +7,7 @@ public class User {
     private String phone;
     private String vehicleType;
     private String uId;
+    private Integer credits;
 
 
     public User() {
@@ -52,6 +53,14 @@ public class User {
         this.vehicleType = vehicleType;
     }
 
+    public Integer getCredits() {
+        return credits;
+    }
+
+    public void setCredits(Integer credits) {
+        this.credits = credits;
+    }
+
     @Override
     public String toString() {
         return "User{" +
@@ -60,10 +69,11 @@ public class User {
                 ", phone='" + phone + '\'' +
                 ", vehicleType='" + vehicleType + '\'' +
                 ", uId='" + uId + '\'' +
+                ", credits=" + credits +
                 '}';
     }
 
-   /* @Override
+    /* @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;

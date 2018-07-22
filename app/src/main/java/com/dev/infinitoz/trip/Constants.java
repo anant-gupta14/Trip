@@ -42,4 +42,5 @@ public interface Constants {
     String ADD_MEETING_POINT = "add meeting point";
     String SOS = "SOS";
     String OK = "OK";
+    String AVLBL_COINS = "Available coins : ";
 }

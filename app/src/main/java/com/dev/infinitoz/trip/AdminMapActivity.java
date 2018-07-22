@@ -79,6 +79,7 @@ import com.google.firebase.database.ValueEventListener;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -163,14 +164,16 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                         Set<String> users = sosUserMap.keySet();
                         if (compareSOSUsers(users)) {
                             prevSOSUsers = users;
-                            creatAlertDialog(getSOSMessage(users));
+                            if (users.size() > 1 || !users.contains(userId)) {
+                                creatAlertDialog(getSOSMessage(users));
+                            }
                         }
 
                     } else {
                         if (isSOSDIalogEnabled) {
                             prevSOSUsers = null;
                             if (mp != null) {
-                                mp.stop();
+                                mp.release();
                                 sosDialog.setOnDismissListener(new DialogInterface.OnDismissListener() {
                                     @Override
                                     public void onDismiss(DialogInterface dialog) {
@@ -417,13 +420,20 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             sosDialog.setTitle(Messages.SOS_TITLE);
         }
         sosDialog.setMessage(msg);
-        mp.start();
         sosDialog.setPositiveButton(Constants.OK, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 mp.stop();
+                try {
+                    mp.prepare();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         });
+
+//        mp.seekTo(0);
+        mp.start();
         sosDialog.show();
 
 
@@ -456,6 +466,11 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
                 }
             });
+        }
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
         return userMap.get(userId);
     }
