@@ -21,6 +21,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.model.User;
 import com.dev.infinitoz.service.OnAppKilledService;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -46,7 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private FirebaseAuth.AuthStateListener fireBaseAuthListener;
 
     boolean isUserAvailable;
-    private String userId;
+    private String userId, userEmail;
     private RelativeLayout progressBar;
     private TextView forgotPassTextView;
     //private  static Bus bus;
@@ -75,6 +76,10 @@ public class MainActivity extends AppCompatActivity {
             public void onDataChange(DataSnapshot dataSnapshot) {
                 if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
                     Map<String, Object> userDataMap = (Map<String, Object>) dataSnapshot.getValue();
+                    User currentUser = dataSnapshot.getValue(User.class);
+                    currentUser.setuId(userId);
+                    currentUser.setEmailId(userEmail);
+                    TripContext.addValue(Constants.CURRENT_USER, currentUser);
                     if (userDataMap.get(Constants.NAME) == null) {
                         Intent intent = new Intent(MainActivity.this, UserProfileActivity.class);
                         startActivity(intent);
@@ -213,6 +218,7 @@ public class MainActivity extends AppCompatActivity {
                 if (user != null) {
                     TripContext.addValue(Constants.USER, user);
                     userId = user.getUid();
+                    userEmail = user.getEmail();
                     //email verfication
                     /*if(!user.isEmailVerified()){
                         Intent intent = new Intent(MainActivity.this,VerifyEmailActivity.class);

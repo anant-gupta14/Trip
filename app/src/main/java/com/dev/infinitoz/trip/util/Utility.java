@@ -100,6 +100,13 @@ public class Utility {
         return sb.toString();
     }
 
+    public static void updateCoinsToUser(String userId, String coins) {
+        DatabaseReference userDBref = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
+        Map<String, Object> map = new HashMap<>();
+        map.put(Constants.COINS, coins);
+        userDBref.updateChildren(map);
+    }
+
     /*public static String getTimeStampByLocale(String timeStamp) {
 
         dateFormat = new SimpleDateFormat(Constants.DATE_FORMAT_TIMEZONE);

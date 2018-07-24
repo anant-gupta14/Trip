@@ -7,7 +7,8 @@ public class User {
     private String phone;
     private String vehicleType;
     private String uId;
-    private Integer credits;
+    private String coins;
+    private String emailId;
 
 
     public User() {
@@ -53,12 +54,20 @@ public class User {
         this.vehicleType = vehicleType;
     }
 
-    public Integer getCredits() {
-        return credits;
+    public String getCoins() {
+        return coins;
     }
 
-    public void setCredits(Integer credits) {
-        this.credits = credits;
+    public void setCoins(String coins) {
+        this.coins = coins;
+    }
+
+    public String getEmailId() {
+        return emailId;
+    }
+
+    public void setEmailId(String emailId) {
+        this.emailId = emailId;
     }
 
     @Override
@@ -69,7 +78,8 @@ public class User {
                 ", phone='" + phone + '\'' +
                 ", vehicleType='" + vehicleType + '\'' +
                 ", uId='" + uId + '\'' +
-                ", credits=" + credits +
+                ", coins=" + coins +
+                ", emailId='" + emailId + '\'' +
                 '}';
     }
 

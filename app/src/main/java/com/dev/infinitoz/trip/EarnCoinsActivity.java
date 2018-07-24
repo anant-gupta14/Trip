@@ -3,19 +3,27 @@ package com.dev.infinitoz.trip;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
+import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.model.User;
+import com.dev.infinitoz.trip.util.Utility;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.reward.RewardItem;
 import com.google.android.gms.ads.reward.RewardedVideoAd;
 import com.google.android.gms.ads.reward.RewardedVideoAdListener;
 
+import java.math.BigInteger;
+
 public class EarnCoinsActivity extends AppCompatActivity implements RewardedVideoAdListener {
 
     private RewardedVideoAd mAd;
     private TextView coinsText;
-    private int coins;
+    private User currentUser;
+    private Button startVideoBT;
+//    private BigInteger coins;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,7 +31,9 @@ public class EarnCoinsActivity extends AppCompatActivity implements RewardedVide
         setContentView(R.layout.activity_earn_coins);
 
         coinsText = findViewById(R.id.coinsText);
-
+        startVideoBT = findViewById(R.id.startVideo);
+        currentUser = (User) TripContext.getValue(Constants.CURRENT_USER);
+        coinsText.setText(Constants.AVLBL_COINS + currentUser.getCoins());
         MobileAds.initialize(getApplicationContext(), "ca-app-pub-3940256099942544~3347511713");
 
         mAd = MobileAds.getRewardedVideoAdInstance(this);
@@ -69,8 +79,12 @@ public class EarnCoinsActivity extends AppCompatActivity implements RewardedVide
 
     @Override
     public void onRewarded(RewardItem rewardItem) {
-        coins = coins + 5;
-        coinsText.setText(Constants.AVLBL_COINS + coins);
+
+        BigInteger credits = new BigInteger(currentUser.getCoins());
+        credits = credits.add(new BigInteger("5"));
+        currentUser.setCoins(credits.toString());
+        coinsText.setText(Constants.AVLBL_COINS + credits.toString());
+        Utility.updateCoinsToUser(currentUser.getuId(), credits.toString());
     }
 
     @Override

@@ -10,14 +10,14 @@
     <TextView
         android:id="@+id/coinsText"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Avialable coins : 00" />
+        android:layout_height="wrap_content" />
 
     <Button
         android:id="@+id/startVideo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="startVideo"
+        android:enabled="false"
         android:text="earn coins by watching video" />
 
 </LinearLayout>

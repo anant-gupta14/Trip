@@ -14,6 +14,7 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.model.User;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
@@ -53,13 +54,17 @@ public class UserProfileActivity extends AppCompatActivity {
     }
 
     private void saveUserProfie() {
+        User currentUser = (User) TripContext.getValue(Constants.CURRENT_USER);
         Map<String, Object> saveMap = new HashMap<>();
         if (userName.getText().toString() != null) {
             saveMap.put(Constants.NAME, userName.getText().toString());
+            currentUser.setName(userName.getText().toString());
+
         }
 
         if (userPhone.getText().toString() != null) {
             saveMap.put(Constants.PHONE, userPhone.getText().toString());
+            currentUser.setPhone(userPhone.getText().toString());
         }
         int radioButtonId = vehicleGroup.getCheckedRadioButtonId();
         final RadioButton radioButton = findViewById(radioButtonId);
@@ -67,7 +72,13 @@ public class UserProfileActivity extends AppCompatActivity {
             Toast.makeText(UserProfileActivity.this, "Please select Convaynace mode", Toast.LENGTH_SHORT).show();
             return;
         }
+
         saveMap.put(Constants.VEHICLE_TYPE, radioButton.getText().toString());
+        currentUser.setVehicleType(radioButton.getText().toString());
+        if (currentUser.getCoins() == null) {
+            saveMap.put(Constants.COINS, Constants.INITIAL_COINS);
+            currentUser.setCoins(Constants.INITIAL_COINS);
+        }
         userDBRef.updateChildren(saveMap);
 
     }

@@ -10,6 +10,7 @@ public interface Constants {
     String CAR = "Car";
     String BIKE = "Bike";
     String HUMAN = "Human";
+    String INITIAL_COINS = "50";
 
     String WALK = "Walk";
     String BACK_MENU = "BACK_MENU";
@@ -43,4 +44,7 @@ public interface Constants {
     String SOS = "SOS";
     String OK = "OK";
     String AVLBL_COINS = "Available coins : ";
+    String CURRENT_USER = "CURRENT_USER";
+    String COINS = "coins";
+
 }
