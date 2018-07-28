@@ -1,10 +1,15 @@
 package com.dev.infinitoz.trip.util;
 
+import android.content.Context;
+import android.widget.Toast;
+
 import com.dev.infinitoz.TripContext;
+import com.dev.infinitoz.model.User;
 import com.dev.infinitoz.trip.Constants;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
+import java.math.BigInteger;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -115,4 +120,36 @@ public class Utility {
 
 
     }*/
+
+    public static boolean checkAvailableCoins(User currentUser, String role, Context ctx) {
+        boolean isAllowed = false;
+        if (currentUser != null) {
+            String coins = currentUser.getCoins();
+            BigInteger credits = new BigInteger(coins);
+            int deductCoins = 0;
+            String errorMessage = null;
+            switch (role) {
+                case Constants.ADMIN:
+                    deductCoins = Constants.ADMIN_DEDUCT_COINS;
+                    errorMessage = Messages.INSUFFICIENT_COINS_ADMIN;
+                    break;
+                case Constants.USER:
+                    deductCoins = Constants.USER_DEDUCT_COINS;
+                    errorMessage = Messages.INSUFFICIENT_COINS_USER;
+                    break;
+            }
+            if (credits.intValue() >= deductCoins) {
+                credits = credits.subtract(BigInteger.valueOf(deductCoins));
+                Utility.updateCoinsToUser(currentUser.getuId(), credits.toString());
+                currentUser.setCoins(credits.toString());
+                isAllowed = true;
+            } else {
+                Toast.makeText(ctx, errorMessage, Toast.LENGTH_LONG).show();
+            }
+        }
+        return isAllowed;
+    }
+
+
+
 }

@@ -47,4 +47,6 @@ public interface Constants {
     String CURRENT_USER = "CURRENT_USER";
     String COINS = "coins";
 
+    int ADMIN_DEDUCT_COINS = 10;
+    int USER_DEDUCT_COINS = 5;
 }

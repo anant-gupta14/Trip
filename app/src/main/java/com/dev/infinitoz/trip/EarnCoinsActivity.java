@@ -57,7 +57,7 @@ public class EarnCoinsActivity extends AppCompatActivity implements RewardedVide
 
     @Override
     public void onRewardedVideoAdLoaded() {
-
+        startVideoBT.setEnabled(true);
     }
 
     @Override
@@ -81,7 +81,7 @@ public class EarnCoinsActivity extends AppCompatActivity implements RewardedVide
     public void onRewarded(RewardItem rewardItem) {
 
         BigInteger credits = new BigInteger(currentUser.getCoins());
-        credits = credits.add(new BigInteger("5"));
+        credits = credits.add(BigInteger.valueOf(5));
         currentUser.setCoins(credits.toString());
         coinsText.setText(Constants.AVLBL_COINS + credits.toString());
         Utility.updateCoinsToUser(currentUser.getuId(), credits.toString());

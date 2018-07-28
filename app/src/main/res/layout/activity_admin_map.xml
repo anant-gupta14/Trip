@@ -180,7 +180,13 @@
                 android:layout_width="100dp"
                 android:layout_height="35dp"
                 android:text="Share Trip"
-                android:visibility="visible" />
+                android:visibility="gone" />
+            <Button
+                android:id="@+id/endTrip"
+                android:layout_width="100dp"
+                android:layout_height="35dp"
+                android:text="End Trip"
+                android:visibility="gone" />
         </LinearLayout>
 
     </android.support.v4.widget.NestedScrollView>

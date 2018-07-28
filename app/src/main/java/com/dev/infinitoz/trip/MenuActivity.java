@@ -16,7 +16,9 @@ import android.widget.Toast;
 
 import com.dev.infinitoz.ChangePasswordActivity;
 import com.dev.infinitoz.TripContext;
-import com.google.android.gms.location.FusedLocationProviderClient;
+import com.dev.infinitoz.model.User;
+import com.dev.infinitoz.trip.util.Messages;
+import com.dev.infinitoz.trip.util.Utility;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -28,13 +30,13 @@ import com.google.firebase.database.ValueEventListener;
 public class MenuActivity extends AppCompatActivity {
 
 
-    private FusedLocationProviderClient fusedLocationProviderClient;
 
     private Button startButton, joinTripButton;
     private EditText tripID;
     private DrawerLayout drawerLayout;
     private ActionBarDrawerToggle drawerToggle;
     private NavigationView navigationView;
+    private User currentUser;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,11 +46,12 @@ public class MenuActivity extends AppCompatActivity {
         startButton = findViewById(R.id.startTrip);
         joinTripButton = findViewById(R.id.joinTrip);
         tripID = findViewById(R.id.tripId);
+        currentUser = (User) TripContext.getValue(Constants.CURRENT_USER);
 
         startButton.setOnClickListener((v) -> {
-                    Intent intent = new Intent(MenuActivity.this, AdminMapActivity.class);
-                    startActivity(intent);
-                    finish();
+            Intent intent = new Intent(MenuActivity.this, AdminMapActivity.class);
+            startActivity(intent);
+            finish();
                 }
         );
 
@@ -58,12 +61,14 @@ public class MenuActivity extends AppCompatActivity {
                         @Override
                         public void onDataChange(DataSnapshot dataSnapshot) {
                             if (dataSnapshot.exists() && dataSnapshot.getChildrenCount() > 0) {
-                                Intent intent = new Intent(MenuActivity.this, UserMapsActivity.class);
-                                intent.putExtra(Constants.TRIP_ID, tripID.getText().toString());
-                                startActivity(intent);
-                                finish();
+                                if (Utility.checkAvailableCoins(currentUser, Constants.USER, MenuActivity.this)) {
+                                    Intent intent = new Intent(MenuActivity.this, UserMapsActivity.class);
+                                    intent.putExtra(Constants.TRIP_ID, tripID.getText().toString());
+                                    startActivity(intent);
+                                    finish();
+                                }
                             } else {
-                                Toast.makeText(MenuActivity.this, "Trip id doesnot exist", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(MenuActivity.this, Messages.TRIP_ID_NOT_EXIST, Toast.LENGTH_SHORT).show();
                             }
 
                         }
@@ -135,6 +140,7 @@ public class MenuActivity extends AppCompatActivity {
         });
 
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {

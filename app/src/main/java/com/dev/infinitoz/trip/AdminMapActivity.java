@@ -104,7 +104,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private PlaceAutocompleteFragment startAutocompleteFragment, destAutocompleteFragment, meetPointFragment;
 
     private Location lastLocation;
-    private Button logout, startTripButton, shareTripButton, slideButton, meetPointButton, addMeetingBT, sosBT;
+    private Button logout, startTripButton, shareTripButton, slideButton, meetPointButton, addMeetingBT, sosBT, endTripBT;
     private boolean isTripStarted, isReloadTrip, isMeetBTCLicked, isSOSClicked;
     private TextView tripIdTextView;
     private DatabaseReference tripDBReference, userDBReference;
@@ -119,6 +119,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private MediaPlayer mp;
     private AlertDialog.Builder sosDialog;
     private boolean isSOSDIalogEnabled;
+    private User currentUser;
     LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
@@ -165,7 +166,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
                         if (compareSOSUsers(users)) {
                             prevSOSUsers = users;
                             if (users.size() > 1 || !users.contains(userId)) {
-                                creatAlertDialog(getSOSMessage(users));
+                                creatSOSAlertDialog(getSOSMessage(users));
                             }
                         }
 
@@ -409,7 +410,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         return poly;
     }
 
-    private void creatAlertDialog(String msg) {
+    private void creatSOSAlertDialog(String msg) {
         isSOSDIalogEnabled = true;
         if (mp == null) {
             mp = MediaPlayer.create(AdminMapActivity.this, Settings.System.DEFAULT_RINGTONE_URI);
@@ -599,6 +600,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         adView = findViewById(R.id.adView);
         AdRequest adRequest = new AdRequest.Builder().addTestDevice("8D8CED2F4594A1FD38529F7D241C99BF").build();
         adView.loadAd(adRequest);
+        currentUser = (User) TripContext.getValue(Constants.CURRENT_USER);
         initialize();
 
         ActionBar actionBar = getSupportActionBar();
@@ -651,7 +653,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         findViewById(id).setOnClickListener(v->{
             Log.d("action bar clicked","true");
         });*/
-
+        endTripBT = findViewById(R.id.endTrip);
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
         cardLinearLayout = findViewById(R.id.cards);
@@ -741,7 +743,13 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         });*/
 
         startTripButton.setOnClickListener((view) -> {
-            createTrip();
+            if (Utility.checkAvailableCoins(currentUser, Constants.ADMIN, AdminMapActivity.this)) {
+                createTrip();
+            }
+        });
+
+        endTripBT.setOnClickListener(view -> {
+            endTrip();
         });
 
         shareTripButton.setOnClickListener(v -> {
@@ -771,10 +779,10 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     }
 
     private void createTrip() {
-        if (isTripStarted) {
+        /*if (isTripStarted) {
             endTrip();
             return;
-        }
+        }*/
         isTripStarted = true;
         if (TripContext.getValue(Constants.RELOAD_TRIP) == null) {
             tripID = FirebaseDatabase.getInstance().getReference(Constants.TRIP).push().getKey();//Utility.generateTripId(userId);
@@ -783,8 +791,9 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         setStartAndDestLocation();
         //Utility.updateUserToTrip(true, userId);
         Utility.updateTripIdToUser(true, userId);
-
-        startTripButton.setText(Constants.END_TRIP);
+        endTripBT.setVisibility(View.VISIBLE);
+        //startTripButton.setText(Constants.END_TRIP);
+        startTripButton.setVisibility(View.GONE);
         cardLinearLayout.setVisibility(View.GONE);
         tripIdTextView.setBackgroundColor(R.color.colorAccent);
         tripIdTextView.setText(tripID);
@@ -841,7 +850,8 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             adminMarker.remove();
         }
         cardLinearLayout.setVisibility(View.VISIBLE);
-        startTripButton.setText(Constants.START_TRIP);
+//        startTripButton.setText(Constants.START_TRIP);
+        startTripButton.setVisibility(View.VISIBLE);
         tripIdTextView.setVisibility(View.GONE);
         shareTripButton.setVisibility(View.GONE);
         meetLinearLayout.setVisibility(View.GONE);
