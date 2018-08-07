@@ -15,8 +15,6 @@ import com.google.android.gms.ads.reward.RewardItem;
 import com.google.android.gms.ads.reward.RewardedVideoAd;
 import com.google.android.gms.ads.reward.RewardedVideoAdListener;
 
-import java.math.BigInteger;
-
 public class EarnCoinsActivity extends AppCompatActivity implements RewardedVideoAdListener {
 
     private RewardedVideoAd mAd;
@@ -79,12 +77,10 @@ public class EarnCoinsActivity extends AppCompatActivity implements RewardedVide
 
     @Override
     public void onRewarded(RewardItem rewardItem) {
-
-        BigInteger credits = new BigInteger(currentUser.getCoins());
-        credits = credits.add(BigInteger.valueOf(5));
-        currentUser.setCoins(credits.toString());
-        coinsText.setText(Constants.AVLBL_COINS + credits.toString());
-        Utility.updateCoinsToUser(currentUser.getuId(), credits.toString());
+        String credits = "5";
+        Utility.updateCoinsToUser(currentUser, credits, true);
+//        currentUser.setCoins(credits.toString());
+        coinsText.setText(Constants.AVLBL_COINS + currentUser.getCoins());
     }
 
     @Override

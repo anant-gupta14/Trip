@@ -6,8 +6,13 @@ import android.widget.Toast;
 import com.dev.infinitoz.TripContext;
 import com.dev.infinitoz.model.User;
 import com.dev.infinitoz.trip.Constants;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.Transaction;
+import com.google.firebase.database.ValueEventListener;
 
 import java.math.BigInteger;
 import java.text.DateFormat;
@@ -105,11 +110,34 @@ public class Utility {
         return sb.toString();
     }
 
-    public static void updateCoinsToUser(String userId, String coins) {
-        DatabaseReference userDBref = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(userId);
-        Map<String, Object> map = new HashMap<>();
+    public static void updateCoinsToUser(User user, String coins, boolean add) {
+        DatabaseReference userDBref = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(user.getuId()).child(Constants.COINS);
+        userDBref.runTransaction(new Transaction.Handler() {
+            @Override
+            public Transaction.Result doTransaction(MutableData mutableData) {
+                String userCoins = (String) mutableData.getValue();
+//                String userCoins = user.getCoins();
+                BigInteger credits = new BigInteger(coins);
+                BigInteger userCoinsInt = new BigInteger(userCoins);
+                if (add) {
+                    userCoinsInt = userCoinsInt.add(credits);
+                } else {
+                    userCoinsInt = userCoinsInt.subtract(credits);
+                }
+                user.setCoins(userCoinsInt.toString());
+//                TripContext.addValue(Constants.CURRENT_USER,user);
+                mutableData.setValue(userCoinsInt.toString());
+                return Transaction.success(mutableData);
+            }
+
+            @Override
+            public void onComplete(DatabaseError databaseError, boolean b, DataSnapshot dataSnapshot) {
+
+            }
+        });
+        /*Map<String, Object> map = new HashMap<>();
         map.put(Constants.COINS, coins);
-        userDBref.updateChildren(map);
+        userDBref.updateChildren(map);*/
     }
 
     /*public static String getTimeStampByLocale(String timeStamp) {
@@ -122,32 +150,47 @@ public class Utility {
     }*/
 
     public static boolean checkAvailableCoins(User currentUser, String role, Context ctx) {
-        boolean isAllowed = false;
+        final boolean[] isAllowed = {false};
         if (currentUser != null) {
-            String coins = currentUser.getCoins();
-            BigInteger credits = new BigInteger(coins);
-            int deductCoins = 0;
-            String errorMessage = null;
-            switch (role) {
-                case Constants.ADMIN:
-                    deductCoins = Constants.ADMIN_DEDUCT_COINS;
-                    errorMessage = Messages.INSUFFICIENT_COINS_ADMIN;
-                    break;
-                case Constants.USER:
-                    deductCoins = Constants.USER_DEDUCT_COINS;
-                    errorMessage = Messages.INSUFFICIENT_COINS_USER;
-                    break;
-            }
-            if (credits.intValue() >= deductCoins) {
-                credits = credits.subtract(BigInteger.valueOf(deductCoins));
-                Utility.updateCoinsToUser(currentUser.getuId(), credits.toString());
-                currentUser.setCoins(credits.toString());
-                isAllowed = true;
-            } else {
-                Toast.makeText(ctx, errorMessage, Toast.LENGTH_LONG).show();
-            }
+            FirebaseDatabase.getInstance().getReference(Constants.USERS).child(currentUser.getuId()).addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        User dbUser = dataSnapshot.getValue(User.class);
+                        String coins = dbUser.getCoins();
+                        BigInteger credits = new BigInteger(coins);
+                        int deductCoins = 0;
+                        String errorMessage = null;
+                        switch (role) {
+                            case Constants.ADMIN:
+                                deductCoins = Constants.ADMIN_DEDUCT_COINS;
+                                errorMessage = Messages.INSUFFICIENT_COINS_ADMIN;
+                                break;
+                            case Constants.USER:
+                                deductCoins = Constants.USER_DEDUCT_COINS;
+                                errorMessage = Messages.INSUFFICIENT_COINS_USER;
+                                break;
+                        }
+                        if (credits.intValue() >= deductCoins) {
+                            //credits = credits.subtract(BigInteger.valueOf(deductCoins));
+                            Utility.updateCoinsToUser(currentUser, String.valueOf(deductCoins), false);
+//                            currentUser.setCoins(credits.toString());
+                            isAllowed[0] = true;
+                        } else {
+                            Toast.makeText(ctx, errorMessage, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+            
+
         }
-        return isAllowed;
+        return isAllowed[0];
     }
 
 
