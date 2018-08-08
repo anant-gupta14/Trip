@@ -11,4 +11,6 @@ public interface Messages {
     String INSUFFICIENT_COINS_ADMIN = "Sorry!!! insufficient funds to start trip. Earn Coins from Menu";
     String INSUFFICIENT_COINS_USER = "Sorry!!! insufficient funds to join trip. Earn Coins from Menu";
     String TRIP_ID_NOT_EXIST = "Trip id doesnot exist";
+    String EMPTY_OR_INVALID_EMAIL = "Email address either empty or invalid";
+    String TAP_TWICE_EXIT = "Tap back one more time to exit";
 }

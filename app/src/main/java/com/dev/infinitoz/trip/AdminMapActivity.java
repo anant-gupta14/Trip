@@ -2,6 +2,8 @@ package com.dev.infinitoz.trip;
 
 import android.Manifest;
 import android.animation.ValueAnimator;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -16,6 +18,8 @@ import android.os.SystemClock;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomSheetBehavior;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
@@ -74,12 +78,15 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.Transaction;
 import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -95,7 +102,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     LocationRequest locationRequest;
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
-    BottomSheetBehavior bottomSheetBehavior;
+    private BottomSheetBehavior bottomSheetBehavior;
     private String startPoint, endPoint, tripID, userId, otp;
     boolean isClicked;
     private SupportMapFragment mapFragment;
@@ -120,6 +127,16 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
     private AlertDialog.Builder sosDialog;
     private boolean isSOSDIalogEnabled;
     private User currentUser;
+    private Snackbar snackbar;
+    private CoordinatorLayout mainCoordinatorLayout;
+    public BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String status = Utility.getConnectivityStatusString(context);
+            Utility.setSnackbarMessage(snackbar, mainCoordinatorLayout, status, false);
+        }
+    };
+    private boolean internetConnected = true;
     LocationCallback locationCallback = new LocationCallback() {
         @Override
         public void onLocationResult(LocationResult locationResult) {
@@ -152,6 +169,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
 
         }
     };
+
 
     private void getSOSDetails() {
         tripDBReference.addValueEventListener(new ValueEventListener() {
@@ -594,6 +612,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         mapFragment.getMapAsync(this);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        mainCoordinatorLayout = findViewById(R.id.mainCordinatorlayout);
 
 
         MobileAds.initialize(this, "ca-app-pub-3940256099942544~3347511713");
@@ -603,35 +622,7 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         currentUser = (User) TripContext.getValue(Constants.CURRENT_USER);
         initialize();
 
-        ActionBar actionBar = getSupportActionBar();
-        if (actionBar != null) {
-            actionBar.setDisplayShowTitleEnabled(false);
-            actionBar.setDisplayShowCustomEnabled(true);
-            View customView = getLayoutInflater().inflate(R.layout.title, null);
-            TextView textView = customView.findViewById(R.id.toolbar_title);
 
-            textView.setOnClickListener(view -> {
-                if (isTripStarted) {
-                    TripContext.addValue(Constants.RELOAD_TRIP, true);
-                }
-                Intent intent = new Intent(AdminMapActivity.this, AdminManagementActivity.class);
-                startActivity(intent);
-            });
-
-            slideButton = customView.findViewById(R.id.testBT);
-            View bottomSheet = findViewById(R.id.bottom_sheet);
-            bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
-            bottomSheetBehavior.setPeekHeight(0);
-            slideButton.setOnClickListener(v -> {
-                int state = bottomSheetBehavior.getState();
-                if (BottomSheetBehavior.STATE_COLLAPSED == state) {
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-                } else if (BottomSheetBehavior.STATE_EXPANDED == state) {
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
-                }
-            });
-            actionBar.setCustomView(customView);
-        }
         setListeners();
         if (TripContext.getValue(Constants.RELOAD_TRIP) != null) {
             tripID = (String) TripContext.getValue(Constants.TRIP_ID);
@@ -653,6 +644,35 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         findViewById(id).setOnClickListener(v->{
             Log.d("action bar clicked","true");
         });*/
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayShowTitleEnabled(false);
+            actionBar.setDisplayShowCustomEnabled(true);
+            View customView = getLayoutInflater().inflate(R.layout.title, null);
+            TextView textView = customView.findViewById(R.id.toolbar_title);
+
+            textView.setOnClickListener(view -> {
+                if (isTripStarted) {
+                    TripContext.addValue(Constants.RELOAD_TRIP, true);
+                }
+                Intent intent = new Intent(AdminMapActivity.this, AdminManagementActivity.class);
+                startActivity(intent);
+            });
+
+            slideButton = customView.findViewById(R.id.slideUpButton);
+            View bottomSheet = findViewById(R.id.bottom_sheet);
+            bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+            bottomSheetBehavior.setPeekHeight(0);
+            slideButton.setOnClickListener(v -> {
+                int state = bottomSheetBehavior.getState();
+                if (BottomSheetBehavior.STATE_COLLAPSED == state) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                } else if (BottomSheetBehavior.STATE_EXPANDED == state) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
+            });
+            actionBar.setCustomView(customView);
+        }
         endTripBT = findViewById(R.id.endTrip);
         startAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.startAutoComp);
         destAutocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.destAutoComp);
@@ -743,9 +763,54 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
         });*/
 
         startTripButton.setOnClickListener((view) -> {
-            if (Utility.checkAvailableCoins(currentUser, Constants.ADMIN, AdminMapActivity.this)) {
-                createTrip();
-            }
+            //if (Utility.checkAvailableCoins(currentUser, Constants.ADMIN, AdminMapActivity.this)) {
+
+            FirebaseDatabase.getInstance().getReference(Constants.USERS).child(currentUser.getuId()).addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    if (dataSnapshot.exists()) {
+                        User dbUser = dataSnapshot.getValue(User.class);
+                        BigInteger userCredits = new BigInteger(dbUser.getCoins());
+                        if (userCredits.intValue() >= Constants.ADMIN_DEDUCT_COINS) {
+                            DatabaseReference userDBref = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(currentUser.getuId()).child(Constants.COINS);
+
+                            userDBref.runTransaction(new Transaction.Handler() {
+                                @Override
+                                public Transaction.Result doTransaction(MutableData mutableData) {
+                                    String userCoins = (String) mutableData.getValue();
+                                    if (userCoins == null) {
+                                        return Transaction.success(mutableData);
+                                    }
+                                    BigInteger credits = new BigInteger(String.valueOf(Constants.ADMIN_DEDUCT_COINS));
+                                    BigInteger userCoinsInt = new BigInteger(userCoins);
+                                    userCoinsInt = userCoinsInt.subtract(credits);
+                                    currentUser.setCoins(userCoinsInt.toString());
+                                    mutableData.setValue(userCoinsInt.toString());
+                                    return Transaction.success(mutableData);
+                                }
+
+                                @Override
+                                public void onComplete(DatabaseError databaseError, boolean b, DataSnapshot dataSnapshot) {
+                                    if (b) {
+                                        createTrip();
+                                    }
+                                }
+                            });
+
+                        } else {
+                            Toast.makeText(AdminMapActivity.this, Messages.INSUFFICIENT_COINS_ADMIN, Toast.LENGTH_LONG).show();
+                        }
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+
+
+            // }
         });
 
         endTripBT.setOnClickListener(view -> {
@@ -1049,5 +1114,17 @@ public class AdminMapActivity extends AppCompatActivity implements OnMapReadyCal
             return;
         }
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(broadcastReceiver, Utility.getInternetFilterBoradcast());
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(broadcastReceiver);
     }
 }

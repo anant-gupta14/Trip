@@ -1,5 +1,7 @@
 package com.dev.infinitoz.trip;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -9,6 +11,9 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.provider.Settings;
+import android.support.design.widget.BottomSheetBehavior;
+import android.support.design.widget.CoordinatorLayout;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBar;
@@ -17,6 +22,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -27,6 +33,9 @@ import com.dev.infinitoz.trip.util.Messages;
 import com.dev.infinitoz.trip.util.Utility;
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -58,6 +67,8 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
 
     private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
+    private BottomSheetBehavior bottomSheetBehavior;
+    private AdView adView;
     private LocationRequest locationRequest;
     private Location lastLocation;
     private Button logout, leaveTripButton;
@@ -72,6 +83,10 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private View mapView;
     private AlertDialog.Builder sosDialog;
     private Set<String> prevSOSUsers;
+    private Snackbar snackbar;
+    private LinearLayout linearLayout;
+    private boolean internetConnected = true;
+    private CoordinatorLayout mainCoordinatorLayout;
 
     private ValueEventListener tripValueEventListener;
     LocationCallback locationCallback = new LocationCallback() {
@@ -92,6 +107,16 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     private DatabaseReference userDBReference;
     private boolean isSOSDIalogEnabled;
     private MediaPlayer mp;
+    public BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String status = Utility.getConnectivityStatusString(context);
+            Utility.setSnackbarMessage(snackbar, mainCoordinatorLayout, status, false);
+        }
+    };
+    private Button slideButton;
+    private Button sosBT;
+    private boolean isSOSClicked;
 
     private void checkTripAvailableForMe() {
         if (userTripDBRef != null) {
@@ -136,6 +161,18 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
             tripId = getIntent().getExtras().getString(Constants.TRIP_ID);
             TripContext.addValue(Constants.TRIP_ID, tripId);
         }
+
+        //fetchTripDetails();
+    }
+
+    private void initialize() {
+
+        //logout = findViewById(R.id.logout);
+        mainCoordinatorLayout = findViewById(R.id.mainCordinatorlayout);
+        leaveTripButton = findViewById(R.id.leaveTrip);
+
+        mapView = mapFragment.getView();
+        sosBT = findViewById(R.id.sos);
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
             actionBar.setDisplayShowTitleEnabled(false);
@@ -149,17 +186,26 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
                 Intent intent = new Intent(UserMapsActivity.this, AdminManagementActivity.class);
                 startActivity(intent);
             });
+            slideButton = customView.findViewById(R.id.slideUpButton);
+            View bottomSheet = findViewById(R.id.bottom_sheet);
+            bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+            bottomSheetBehavior.setPeekHeight(0);
+            slideButton.setOnClickListener(v -> {
+                int state = bottomSheetBehavior.getState();
+                if (BottomSheetBehavior.STATE_COLLAPSED == state) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                } else if (BottomSheetBehavior.STATE_EXPANDED == state) {
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
+            });
             actionBar.setCustomView(customView);
         }
-        //fetchTripDetails();
-    }
 
-    private void initialize() {
 
-        //logout = findViewById(R.id.logout);
-        leaveTripButton = findViewById(R.id.leaveTrip);
-
-        mapView = mapFragment.getView();
+        MobileAds.initialize(this, "ca-app-pub-3940256099942544~3347511713");
+        adView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().addTestDevice("8D8CED2F4594A1FD38529F7D241C99BF").build();
+        adView.loadAd(adRequest);
 
 
     }
@@ -177,6 +223,22 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
         leaveTripButton.setOnClickListener((view) -> {
             leaveTrip();
             return;
+
+        });
+
+        sosBT.setOnClickListener(v -> {
+            DatabaseReference sosDBRef = tripDatabaseReference.child(Constants.SOS).child(userId);
+            if (!isSOSClicked) {
+                sosDBRef.setValue(true);
+                isSOSClicked = true;
+                sosBT.setText(Messages.STOP_SOS);
+            } else {
+                sosDBRef.removeValue();
+                sosBT.setText(Constants.SOS);
+                isSOSClicked = false;
+
+            }
+
 
         });
     }
@@ -564,5 +626,17 @@ public class UserMapsActivity extends AppCompatActivity implements OnMapReadyCal
     @Override
     public void onBackPressed() {
         //super.onBackPressed();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(broadcastReceiver, Utility.getInternetFilterBoradcast());
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(broadcastReceiver);
     }
 }

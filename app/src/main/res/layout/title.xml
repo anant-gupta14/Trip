@@ -4,7 +4,7 @@
 
     android:layout_height="wrap_content"
     android:gravity="center"
-
+    android:orientation="horizontal"
     >
 
     <TextView
@@ -14,7 +14,7 @@
         android:text="See Others" />
 
     <Button
-        android:id="@+id/testBT"
+        android:id="@+id/slideUpButton"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"

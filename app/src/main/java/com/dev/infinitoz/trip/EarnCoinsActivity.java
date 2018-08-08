@@ -8,12 +8,19 @@ import android.widget.TextView;
 
 import com.dev.infinitoz.TripContext;
 import com.dev.infinitoz.model.User;
-import com.dev.infinitoz.trip.util.Utility;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.MobileAds;
 import com.google.android.gms.ads.reward.RewardItem;
 import com.google.android.gms.ads.reward.RewardedVideoAd;
 import com.google.android.gms.ads.reward.RewardedVideoAdListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.MutableData;
+import com.google.firebase.database.Transaction;
+
+import java.math.BigInteger;
 
 public class EarnCoinsActivity extends AppCompatActivity implements RewardedVideoAdListener {
 
@@ -77,10 +84,37 @@ public class EarnCoinsActivity extends AppCompatActivity implements RewardedVide
 
     @Override
     public void onRewarded(RewardItem rewardItem) {
-        String credits = "5";
-        Utility.updateCoinsToUser(currentUser, credits, true);
+        String coins = "5";
+        //Utility.updateCoinsToUser(currentUser, credits, true);
+        DatabaseReference userDBref = FirebaseDatabase.getInstance().getReference(Constants.USERS).child(currentUser.getuId()).child(Constants.COINS);
+        userDBref.runTransaction(new Transaction.Handler() {
+            @Override
+            public Transaction.Result doTransaction(MutableData mutableData) {
+                String userCoins = (String) mutableData.getValue();
+                if (userCoins == null) {
+                    return Transaction.success(mutableData);
+                }
+//                String userCoins = user.getCoins();
+                BigInteger credits = new BigInteger(coins);
+                BigInteger userCoinsInt = new BigInteger(userCoins);
+
+                userCoinsInt = userCoinsInt.add(credits);
+
+                currentUser.setCoins(userCoinsInt.toString());
+                mutableData.setValue(userCoinsInt.toString());
+
+                return Transaction.success(mutableData);
+            }
+
+            @Override
+            public void onComplete(DatabaseError databaseError, boolean b, DataSnapshot dataSnapshot) {
+                if (b) {
+                    coinsText.setText(Constants.AVLBL_COINS + currentUser.getCoins());
+                }
+            }
+        });
+
 //        currentUser.setCoins(credits.toString());
-        coinsText.setText(Constants.AVLBL_COINS + currentUser.getCoins());
     }
 
     @Override
